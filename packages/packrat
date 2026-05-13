@@ -1,0 +1,19 @@
+#!/bin/bash
+# PackRat – быстрая упаковка/распаковка
+case "${1:-}" in
+    pack)
+        [ -z "$2" ] && { echo "Usage: packrat pack <folder>"; exit 1; }
+        tar -cJf "${2}.tar.xz" "$2"
+        echo "Created ${2}.tar.xz"
+        ;;
+    unpack)
+        [ -z "$2" ] && { echo "Usage: packrat unpack <archive>"; exit 1; }
+        tar -xf "$2"
+        echo "Extracted $2"
+        ;;
+    *)
+        echo "PackRat – архиватор"
+        echo "  pack   <folder>   -> folder.tar.xz"
+        echo "  unpack <archive>  -> extract"
+        ;;
+esac

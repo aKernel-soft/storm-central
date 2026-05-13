@@ -1,0 +1,28 @@
+#!/bin/bash
+# Memo – быстрые заметки с датой
+NOTES="$HOME/.memo_notes"
+touch "$NOTES"
+
+case "${1:-}" in
+    add)
+        shift
+        [ $# -eq 0 ] && { echo "Usage: memo add <text>"; exit 1; }
+        echo "$(date '+%Y-%m-%d %H:%M') | $*" >> "$NOTES"
+        echo "Note added."
+        ;;
+    list)
+        [ ! -s "$NOTES" ] && { echo "No notes."; exit 0; }
+        nl -ba "$NOTES"
+        ;;
+    del)
+        [ -z "$2" ] && { echo "Usage: memo del <line number>"; exit 1; }
+        sed -i "${2}d" "$NOTES"
+        echo "Deleted line $2."
+        ;;
+    *)
+        echo "Memo – заметки в терминале"
+        echo "  add <text>    добавить заметку"
+        echo "  list          показать все"
+        echo "  del <номер>   удалить строку"
+        ;;
+esac

@@ -1,0 +1,48 @@
+#!/bin/bash
+# PassKeeper – менеджер паролей с генератором
+VAULT="$HOME/.passkeeper"
+mkdir -p "$VAULT"
+
+generate_password() {
+    local len="${1:-16}"
+    tr -dc 'A-Za-z0-9!@#$%^&*()_+' </dev/urandom | head -c "$len"; echo
+}
+
+case "${1:-}" in
+    add)
+        read -p "Service name: " service
+        read -p "Username: " user
+        echo -n "Password (leave empty to generate): "
+        read -s pass; echo
+        [ -z "$pass" ] && pass=$(generate_password)
+        echo "$service:$user:$pass" >> "$VAULT/data"
+        echo "Saved. Password: $pass"
+        ;;
+    get)
+        [ -z "$2" ] && { echo "Usage: passkeeper get <service>"; exit 1; }
+        grep "^$2:" "$VAULT/data" | while IFS=: read s u p; do
+            echo "Service: $s"
+            echo "User: $u"
+            echo "Pass: $p"
+        done
+        ;;
+    list)
+        [ -f "$VAULT/data" ] && cut -d: -f1 "$VAULT/data" | sort -u || echo "No entries."
+        ;;
+    generate)
+        generate_password "$2"
+        ;;
+    delete)
+        [ -z "$2" ] && { echo "Usage: passkeeper del <service>"; exit 1; }
+        sed -i "/^$2:/d" "$VAULT/data"
+        echo "Deleted."
+        ;;
+    *)
+        echo "PassKeeper – менеджер паролей"
+        echo "  add          добавить запись"
+        echo "  get <name>   показать пароль"
+        echo "  list         список сервисов"
+        echo "  generate [N] сгенерировать пароль"
+        echo "  delete <name> удалить сервис"
+        ;;
+esac

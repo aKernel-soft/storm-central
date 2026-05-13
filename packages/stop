@@ -1,0 +1,16 @@
+#!/bin/bash
+# STop – простой системный монитор
+while true; do
+    clear
+    echo "===== STOP ====="
+    echo "Uptime: $(uptime)"
+    echo ""
+    echo "Memory:"
+    free -h 2>/dev/null || cat /proc/meminfo | head -3
+    echo ""
+    echo "Top CPU processes:"
+    ps -eo pid,comm,%cpu --sort=-%cpu | head -6
+    echo ""
+    echo "Press Ctrl+C to exit"
+    sleep 3
+done

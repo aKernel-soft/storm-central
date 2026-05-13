@@ -20,6 +20,62 @@
       "type": "script",
       "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/ckm-ihp.sh",
       "magnet": ""
+    },
+    {
+      "name": "bolt",
+      "desc": "Bolt – lightning-fast text editor",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/bolt",
+      "magnet": ""
+    },
+    {
+      "name": "stop",
+      "desc": "STop – system monitor",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/stop",
+      "magnet": ""
+    },
+    {
+      "name": "passkeeper",
+      "desc": "PassKeeper – password manager with generator",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/passkeeper",
+      "magnet": ""
+    },
+    {
+      "name": "memo",
+      "desc": "Memo – quick notes with date",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/memo",
+      "magnet": ""
+    },
+    {
+      "name": "gale",
+      "desc": "Gale – weather in terminal",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/gale",
+      "magnet": ""
+    },
+    {
+      "name": "packrat",
+      "desc": "PackRat – simple archiver",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/packrat",
+      "magnet": ""
+    },
+    {
+      "name": "recon",
+      "desc": "Recon – network scanner",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/recon",
+      "magnet": ""
+    },
+    {
+      "name": "abacus",
+      "desc": "Abacus – console calculator",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/abacus",
+      "magnet": ""
     }
   ]
 }

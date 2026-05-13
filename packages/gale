@@ -1,0 +1,4 @@
+#!/bin/bash
+# Gale – погода через wttr.in
+city="${1:-Moscow}"
+curl -s "wttr.in/${city}?0q" || echo "No internet?"

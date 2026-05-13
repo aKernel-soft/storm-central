@@ -1,0 +1,10 @@
+#!/bin/bash
+# Abacus – консольный калькулятор
+expr="${*}"
+[ -z "$expr" ] && { echo "Usage: abacus <expression>"; echo "Example: abacus 2+2*4"; exit 1; }
+# Используем bc, если есть, иначе awk
+if command -v bc >/dev/null; then
+    echo "$expr" | bc -l
+else
+    awk "BEGIN { printf \"%g\n\", $expr }"
+fi
