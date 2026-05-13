@@ -1,4 +1,4 @@
-# STORM Central Repository
+# STOLER Central Repository
 
 Official package index for **STOLER** – a decentralized package manager using magnet links and direct URLs.  
 Developer: **CKM SOFTWARE** within the **STORM** project.
