@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import curses, sys, os
+import curses, sys, os, re
 
+# ========== i18n ==========
 def get_lang():
     return "ru" if "ru" in os.environ.get("LANG","") else "en"
 
@@ -13,16 +14,166 @@ def t(key):
     }
     return texts[key].get(get_lang(), texts[key]["en"])
 
+# ========== syntax highlighting ==========
+def init_colors():
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)  # keywords
+    curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_BLACK)    # strings
+    curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)   # comments
+    curses.init_pair(4, curses.COLOR_MAGENTA, curses.COLOR_BLACK) # numbers/preprocessor
+    curses.init_pair(5, curses.COLOR_RED, curses.COLOR_BLACK)     # errors/directives
+    curses.init_pair(6, curses.COLOR_WHITE, curses.COLOR_BLACK)   # default
+
+def get_file_type(filepath):
+    ext = os.path.splitext(filepath)[1].lower()
+    if ext in ('.py', '.pyw'): return 'python'
+    elif ext in ('.sh', '.bash', '.zsh'): return 'bash'
+    elif ext in ('.c', '.h', '.cpp', '.hpp'): return 'c'
+    elif ext in ('.asm', '.s', '.S'): return 'asm'
+    return None
+
+def highlight_python(line):
+    tokens = []
+    parts = re.split(r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', line)
+    for i, part in enumerate(parts):
+        if i % 2 == 1:
+            tokens.append((part, curses.color_pair(2)))
+        else:
+            if '#' in part:
+                code, _, comment = part.partition('#')
+                if code:
+                    tokens.extend(highlight_python_keywords(code))
+                tokens.append(('#' + comment, curses.color_pair(3)))
+            else:
+                tokens.extend(highlight_python_keywords(part))
+    return tokens
+
+def highlight_python_keywords(text):
+    keywords = r'\b(and|as|assert|break|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield)\b'
+    tokens = []
+    pos = 0
+    for m in re.finditer(keywords, text):
+        if m.start() > pos:
+            tokens.append((text[pos:m.start()], curses.color_pair(6)))
+        tokens.append((m.group(), curses.color_pair(1)))
+        pos = m.end()
+    if pos < len(text):
+        tokens.append((text[pos:], curses.color_pair(6)))
+    return tokens if tokens else [(text, curses.color_pair(6))]
+
+def highlight_bash(line):
+    tokens = []
+    parts = re.split(r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', line)
+    for i, part in enumerate(parts):
+        if i % 2 == 1:
+            tokens.append((part, curses.color_pair(2)))
+        else:
+            if '#' in part:
+                code, _, comment = part.partition('#')
+                if code:
+                    tokens.extend(highlight_bash_keywords(code))
+                tokens.append(('#' + comment, curses.color_pair(3)))
+            else:
+                tokens.extend(highlight_bash_keywords(part))
+    return tokens
+
+def highlight_bash_keywords(text):
+    keywords = r'\b(if|then|else|elif|fi|for|while|do|done|case|esac|function|return|exit|echo|read|local|export|unset|source|alias)\b'
+    tokens = []
+    pos = 0
+    for m in re.finditer(keywords, text):
+        if m.start() > pos:
+            tokens.append((text[pos:m.start()], curses.color_pair(6)))
+        tokens.append((m.group(), curses.color_pair(1)))
+        pos = m.end()
+    if pos < len(text):
+        tokens.append((text[pos:], curses.color_pair(6)))
+    return tokens if tokens else [(text, curses.color_pair(6))]
+
+def highlight_c(line):
+    tokens = []
+    parts = re.split(r'("(?:[^"\\]|\\.)*"|\'(?:[^\'\\]|\\.)*\')', line)
+    for i, part in enumerate(parts):
+        if i % 2 == 1:
+            tokens.append((part, curses.color_pair(2)))
+        else:
+            if part.lstrip().startswith('#'):
+                tokens.append((part, curses.color_pair(5)))
+            elif '//' in part:
+                code, _, comment = part.partition('//')
+                if code:
+                    tokens.extend(highlight_c_keywords(code))
+                tokens.append(('//' + comment, curses.color_pair(3)))
+            elif '/*' in part:
+                code, _, comment = part.partition('/*')
+                if code:
+                    tokens.extend(highlight_c_keywords(code))
+                tokens.append(('/*' + comment, curses.color_pair(3)))
+            else:
+                tokens.extend(highlight_c_keywords(part))
+    return tokens
+
+def highlight_c_keywords(text):
+    keywords = r'\b(auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|int|long|register|return|short|signed|sizeof|static|struct|switch|typedef|union|unsigned|void|volatile|while)\b'
+    tokens = []
+    pos = 0
+    for m in re.finditer(keywords, text):
+        if m.start() > pos:
+            tokens.append((text[pos:m.start()], curses.color_pair(6)))
+        tokens.append((m.group(), curses.color_pair(1)))
+        pos = m.end()
+    if pos < len(text):
+        tokens.append((text[pos:], curses.color_pair(6)))
+    return tokens if tokens else [(text, curses.color_pair(6))]
+
+def highlight_asm(line):
+    tokens = []
+    if ';' in line:
+        code, _, comment = line.partition(';')
+        if code:
+            tokens.extend(highlight_asm_keywords(code))
+        tokens.append((';' + comment, curses.color_pair(3)))
+    else:
+        tokens.extend(highlight_asm_keywords(line))
+    return tokens
+
+def highlight_asm_keywords(text):
+    keywords = r'\b(mov|add|sub|push|pop|call|ret|jmp|je|jne|cmp|inc|dec|int|nop|db|dw|dd|section|global|extern)\b'
+    tokens = []
+    pos = 0
+    for m in re.finditer(keywords, text):
+        if m.start() > pos:
+            tokens.append((text[pos:m.start()], curses.color_pair(6)))
+        tokens.append((m.group(), curses.color_pair(1)))
+        pos = m.end()
+    if pos < len(text):
+        tokens.append((text[pos:], curses.color_pair(6)))
+    return tokens if tokens else [(text, curses.color_pair(6))]
+
+def highlight_line(line, filetype):
+    if filetype == 'python':
+        return highlight_python(line)
+    elif filetype == 'bash':
+        return highlight_bash(line)
+    elif filetype == 'c':
+        return highlight_c(line)
+    elif filetype == 'asm':
+        return highlight_asm(line)
+    else:
+        return [(line, curses.color_pair(6))]
+
+# ========== main editor ==========
 def main(stdscr):
-    lang = get_lang()
+    init_colors()
     filepath = sys.argv[1] if len(sys.argv) > 1 else "untitled.txt"
     if os.path.exists(filepath):
         with open(filepath) as f: lines = f.read().splitlines()
     else:
         lines = [""]
     if not lines: lines = [""]
+    filetype = get_file_type(filepath)
 
-    curses.curs_set(1)
+    curses.curs_set(1)   # показать курсор
     stdscr.keypad(True)
     curses.raw()
     cur_y, cur_x, modified = 0, 0, False
@@ -30,24 +181,42 @@ def main(stdscr):
     while True:
         h, w = stdscr.getmaxyx()
         stdscr.clear()
-        header = f"{t('title')} | {filepath} | Lines: {len(lines)}"
-        stdscr.addstr(0, 1, header[:w-2], curses.A_REVERSE)
 
+        # header centered
+        header = f"{t('title')} | {filepath} | Lines: {len(lines)}"
+        header_x = max(0, (w - len(header)) // 2)
+        stdscr.addstr(0, header_x, header[:w-1], curses.A_BOLD)
+
+        # draw lines
         for i in range(min(len(lines), h-2)):
             line = lines[i]
+            tokens = highlight_line(line, filetype)
+            xpos = 1
+            for text, attr in tokens:
+                if xpos + len(text) > w-1:
+                    break
+                stdscr.addstr(i+1, xpos, text[:w-1-xpos], attr)
+                xpos += len(text)
+            # put cursor on current line
             if i == cur_y:
-                stdscr.addstr(i+1, 0, f" {line.ljust(w-2)}", curses.A_REVERSE)
-                if cur_x <= len(line): stdscr.move(i+1, cur_x+1)
-                else: stdscr.move(i+1, min(len(line)+1, w-2))
-            else:
-                stdscr.addstr(i+1, 1, line[:w-2])
+                target_x = cur_x + 1
+                if cur_x <= len(line):
+                    stdscr.move(i+1, min(target_x, w-1))
+                else:
+                    stdscr.move(i+1, min(len(line)+1, w-1))
 
+        # help line
         help_text = t('help_line')
         try: stdscr.addstr(h-1, 0, help_text[:w-1])
         except curses.error: pass
+
+        # обязательно переместить курсор перед refresh
+        stdscr.move(cur_y+1, min(cur_x+1, w-1))
         stdscr.refresh()
+
         c = stdscr.getch()
 
+        # movement and editing
         if c == curses.KEY_UP:
             if cur_y > 0: cur_y -= 1; cur_x = min(cur_x, len(lines[cur_y]))
         elif c == curses.KEY_DOWN:
