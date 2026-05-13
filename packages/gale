@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gale – weather with ASCII art for current weather and clean 3-day forecast
+# Gale – weather with ASCII art (now) and clean 3-day forecast via JSON
 
 CONFIG="$HOME/.gale_city"
 
@@ -7,30 +7,22 @@ if locale 2>/dev/null | grep -qi ru; then
     PROMPT_CITY="Введите город по умолчанию: "
     PROMPT_NO_CITY="Город не задан. Введите город сейчас: "
     SAVED="Город сохранён:"
-    FETCHING="Загрузка погоды для"
     MENU_TITLE="Gale – Погода"
     OPT_NOW="[1] Сейчас"
     OPT_FORECAST="[2] Прогноз на 3 дня"
     OPT_SET="[3] Сменить город"
     OPT_QUIT="[q] Выход"
     CHOOSE="Выберите действие: "
-    TODAY="Сегодня"
-    TOMORROW="Завтра"
-    DAY_AFTER="Послезавтра"
 else
     PROMPT_CITY="Enter default city: "
     PROMPT_NO_CITY="No default city set. Enter city now: "
     SAVED="City saved:"
-    FETCHING="Fetching weather for"
     MENU_TITLE="Gale – Weather"
     OPT_NOW="[1] Now"
     OPT_FORECAST="[2] 3-day forecast"
     OPT_SET="[3] Change city"
     OPT_QUIT="[q] Quit"
     CHOOSE="Choose an option: "
-    TODAY="Today"
-    TOMORROW="Tomorrow"
-    DAY_AFTER="Day after tomorrow"
 fi
 
 city="${1:-}"
@@ -66,26 +58,77 @@ if [ -z "$1" ]; then
         read -r choice
         case "$choice" in
             1)
-                # Current weather with ASCII art
                 curl -s "wttr.in/${city}?0q"
                 read -p "Press Enter to continue..."
                 ;;
             2)
-                echo "$FETCHING $city (3 days)..."
-                # Today
-                echo ""
-                echo "  $TODAY:"
-                curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h\\n"
-                # Tomorrow
-                tomorrow=$(date -d "+1 day" +%Y-%m-%d)
-                echo ""
-                echo "  $TOMORROW:"
-                curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h&date=$tomorrow\\n"
-                # Day after tomorrow
-                day_after=$(date -d "+2 days" +%Y-%m-%d)
-                echo ""
-                echo "  $DAY_AFTER:"
-                curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h&date=$day_after\\n"
+                echo "Fetching 3-day forecast for $city..."
+                # JSON API
+                json=$(curl -s "wttr.in/${city}?format=j1")
+                if ! echo "$json" | jq empty 2>/dev/null; then
+                    echo "Failed to get forecast data."
+                    read -p "Press Enter..."
+                    continue
+                fi
+                # Extract 3 days
+                for i in 0 1 2; do
+                    date=$(echo "$json" | jq -r ".weather[$i].date")
+                    max=$(echo "$json" | jq -r ".weather[$i].maxtempC")
+                    min=$(echo "$json" | jq -r ".weather[$i].mintempC")
+                    code=$(echo "$json" | jq -r ".weather[$i].hourly[4].weatherCode")
+                    # Map code to symbol (simplified)
+                    case "$code" in
+                        113) sym="☀️";;
+                        116) sym="⛅";;
+                        119) sym="☁️";;
+                        122) sym="☁️";;
+                        176) sym="🌦️";;
+                        179) sym="🌨️";;
+                        182) sym="🌨️";;
+                        185) sym="🌧️";;
+                        200) sym="⛈️";;
+                        227) sym="🌬️";;
+                        230) sym="🌬️";;
+                        248) sym="🌫️";;
+                        260) sym="🌫️";;
+                        263) sym="🌧️";;
+                        266) sym="🌧️";;
+                        281) sym="🌧️";;
+                        284) sym="🌧️";;
+                        293) sym="🌧️";;
+                        296) sym="🌧️";;
+                        299) sym="🌧️";;
+                        302) sym="🌧️";;
+                        305) sym="🌧️";;
+                        308) sym="🌧️";;
+                        311) sym="🌧️";;
+                        314) sym="🌧️";;
+                        317) sym="🌧️";;
+                        320) sym="🌧️";;
+                        323) sym="🌨️";;
+                        326) sym="🌨️";;
+                        329) sym="🌨️";;
+                        332) sym="🌨️";;
+                        335) sym="🌨️";;
+                        338) sym="🌨️";;
+                        350) sym="🌨️";;
+                        353) sym="🌧️";;
+                        356) sym="🌧️";;
+                        359) sym="🌧️";;
+                        362) sym="🌧️";;
+                        365) sym="🌧️";;
+                        368) sym="🌨️";;
+                        371) sym="🌨️";;
+                        374) sym="🌨️";;
+                        377) sym="🌨️";;
+                        386) sym="⛈️";;
+                        389) sym="⛈️";;
+                        392) sym="⛈️";;
+                        395) sym="🌨️";;
+                        *) sym="❓";;
+                    esac
+                    echo "$date: $sym ${min}°C - ${max}°C"
+                done
                 echo ""
                 read -p "Press Enter to continue..."
                 ;;
@@ -100,6 +143,5 @@ if [ -z "$1" ]; then
         esac
     done
 else
-    # Quick mode: current weather only
     curl -s "wttr.in/${city}?0q"
 fi
