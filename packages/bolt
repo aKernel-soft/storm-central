@@ -1,153 +1,101 @@
 #!/usr/bin/env python3
-import curses
-import sys
-import os
+import curses, sys, os
 
-# ---------- i18n ----------
 def get_lang():
-    lang = os.environ.get("LANG", "")
-    return "ru" if "ru" in lang else "en"
+    return "ru" if "ru" in os.environ.get("LANG","") else "en"
 
 def t(key):
     texts = {
-        "title": {"en": "Bolt - Text Editor", "ru": "Bolt - Текстовый редактор"},
-        "saved": {"en": "File saved", "ru": "Файл сохранён"},
-        "quit_unsaved": {"en": "Unsaved changes! Quit anyway? (y/n)", "ru": "Есть несохранённые изменения! Выйти? (y/n)"},
-        "help_line": {"en": "^S Save  ^X Exit  Arrows: move", "ru": "^S Сохранить  ^X Выйти  Стрелки: перемещение"},
+        "title": {"en":"Bolt - Text Editor","ru":"Bolt - Текстовый редактор"},
+        "saved": {"en":"File saved","ru":"Файл сохранён"},
+        "quit_unsaved": {"en":"Unsaved changes! Quit? (y/n)","ru":"Есть несохранённые изменения! Выйти? (y/n)"},
+        "help_line": {"en":"^S Save  ^X Exit  Arrows: move","ru":"^S Сохранить  ^X Выйти  Стрелки: перемещение"},
     }
     return texts[key].get(get_lang(), texts[key]["en"])
 
-# ---------- main ----------
 def main(stdscr):
     lang = get_lang()
     filepath = sys.argv[1] if len(sys.argv) > 1 else "untitled.txt"
-    
-    # load file
     if os.path.exists(filepath):
-        with open(filepath, "r") as f:
-            lines = f.read().splitlines()
+        with open(filepath) as f: lines = f.read().splitlines()
     else:
         lines = [""]
-    if not lines:
-        lines = [""]
-    
-    # curses setup
+    if not lines: lines = [""]
+
     curses.curs_set(1)
     stdscr.keypad(True)
     curses.raw()
-    curses.mousemask(0)
-    
-    cur_y, cur_x = 0, 0
-    modified = False
-    
+    cur_y, cur_x, modified = 0, 0, False
+
     while True:
         h, w = stdscr.getmaxyx()
-        
-        # draw header
         stdscr.clear()
         header = f"{t('title')} | {filepath} | Lines: {len(lines)}"
         stdscr.addstr(0, 1, header[:w-2], curses.A_REVERSE)
-        
-        # draw text area
+
         for i in range(min(len(lines), h-2)):
             line = lines[i]
             if i == cur_y:
-                # highlight current line
                 stdscr.addstr(i+1, 0, f" {line.ljust(w-2)}", curses.A_REVERSE)
-                # cursor position
-                if cur_x <= len(line):
-                    stdscr.move(i+1, cur_x + 1)
-                else:
-                    stdscr.move(i+1, min(len(line)+1, w-2))
+                if cur_x <= len(line): stdscr.move(i+1, cur_x+1)
+                else: stdscr.move(i+1, min(len(line)+1, w-2))
             else:
                 stdscr.addstr(i+1, 1, line[:w-2])
-        
-        # help line
+
         help_text = t('help_line')
-        try:
-            stdscr.addstr(h-1, 0, help_text[:w-1])
-        except curses.error:
-            pass
-        
+        try: stdscr.addstr(h-1, 0, help_text[:w-1])
+        except curses.error: pass
         stdscr.refresh()
         c = stdscr.getch()
-        
-        # handle keys
+
         if c == curses.KEY_UP:
-            if cur_y > 0:
-                cur_y -= 1
-                cur_x = min(cur_x, len(lines[cur_y]))
+            if cur_y > 0: cur_y -= 1; cur_x = min(cur_x, len(lines[cur_y]))
         elif c == curses.KEY_DOWN:
-            if cur_y < len(lines) - 1:
-                cur_y += 1
-                cur_x = min(cur_x, len(lines[cur_y]))
+            if cur_y < len(lines)-1: cur_y += 1; cur_x = min(cur_x, len(lines[cur_y]))
         elif c == curses.KEY_LEFT:
-            if cur_x > 0:
-                cur_x -= 1
-            elif cur_y > 0:
-                cur_y -= 1
-                cur_x = len(lines[cur_y])
+            if cur_x > 0: cur_x -= 1
+            elif cur_y > 0: cur_y -= 1; cur_x = len(lines[cur_y])
         elif c == curses.KEY_RIGHT:
-            if cur_x < len(lines[cur_y]):
-                cur_x += 1
-            elif cur_y < len(lines) - 1:
-                cur_y += 1
-                cur_x = 0
-        elif c == 8 or c == 127 or c == curses.KEY_BACKSPACE:  # Backspace
+            if cur_x < len(lines[cur_y]): cur_x += 1
+            elif cur_y < len(lines)-1: cur_y += 1; cur_x = 0
+        elif c in (8,127,curses.KEY_BACKSPACE):
             if cur_x > 0:
                 lines[cur_y] = lines[cur_y][:cur_x-1] + lines[cur_y][cur_x:]
-                cur_x -= 1
-                modified = True
+                cur_x -= 1; modified = True
             elif cur_y > 0:
-                # merge with previous line
                 cur_x = len(lines[cur_y-1])
                 lines[cur_y-1] += lines[cur_y]
                 del lines[cur_y]
-                cur_y -= 1
-                modified = True
-        elif c == 10 or c == 13:  # Enter
-            # split line
+                cur_y -= 1; modified = True
+        elif c in (10,13):
             rest = lines[cur_y][cur_x:]
             lines[cur_y] = lines[cur_y][:cur_x]
             lines.insert(cur_y+1, rest)
-            cur_y += 1
-            cur_x = 0
-            modified = True
-        elif c == curses.KEY_DC:  # Delete key
+            cur_y += 1; cur_x = 0; modified = True
+        elif c == curses.KEY_DC:
             if cur_x < len(lines[cur_y]):
                 lines[cur_y] = lines[cur_y][:cur_x] + lines[cur_y][cur_x+1:]
                 modified = True
-            elif cur_y < len(lines) - 1:
-                # join with next line
+            elif cur_y < len(lines)-1:
                 lines[cur_y] += lines[cur_y+1]
                 del lines[cur_y+1]
                 modified = True
-        elif c == curses.KEY_HOME:
-            cur_x = 0
-        elif c == curses.KEY_END:
-            cur_x = len(lines[cur_y])
+        elif c == curses.KEY_HOME: cur_x = 0
+        elif c == curses.KEY_END: cur_x = len(lines[cur_y])
         elif c == 19:  # Ctrl+S
-            with open(filepath, "w") as f:
-                f.write("\n".join(lines))
+            with open(filepath,"w") as f: f.write("\n".join(lines))
             modified = False
-            stdscr.move(h-2, 0)
             stdscr.addstr(h-2, 1, t("saved"), curses.A_BOLD)
-            stdscr.refresh()
-            curses.napms(1000)
+            stdscr.refresh(); curses.napms(1000)
         elif c == 24:  # Ctrl+X
             if modified:
-                stdscr.move(h-2, 0)
                 stdscr.addstr(h-2, 1, t("quit_unsaved"), curses.A_BOLD)
                 stdscr.refresh()
-                confirm = stdscr.getch()
-                if confirm in (121, 89):  # y or Y
-                    break
-            else:
-                break
-        elif c >= 32 and c <= 126:  # printable characters
+                if stdscr.getch() in (121,89): break
+            else: break
+        elif 32 <= c <= 126:
             lines[cur_y] = lines[cur_y][:cur_x] + chr(c) + lines[cur_y][cur_x:]
-            cur_x += 1
-            modified = True
+            cur_x += 1; modified = True
 
 if __name__ == "__main__":
     curses.wrapper(main)
