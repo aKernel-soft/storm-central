@@ -76,6 +76,13 @@
       "type": "script",
       "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/abacus",
       "magnet": ""
+    },
+    {
+      "name": "fetch",
+      "desc": "Fetch – downloader with progress bar and magnet support",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/fetch",
+      "magnet": ""
     }
   ]
 }

@@ -1,0 +1,74 @@
+#!/bin/bash
+# Fetch – file downloader with progress bar and magnet support
+set -e
+
+# i18n
+if locale 2>/dev/null | grep -qi ru; then
+    MSG_USAGE="Использование: fetch <URL или magnet-ссылка>"
+    MSG_DOWNLOADING="Загрузка"
+    MSG_SAVED="Файл сохранён:"
+    MSG_MAGNET_ADDED="Магнит добавлен, ожидание загрузки..."
+    MSG_MAGNET_FAIL="Не удалось добавить магнит."
+    MSG_TRANSMISSION_MISSING="Transmission не установлен. Установите: pkg install transmission (или sudo apt install transmission-cli)"
+    MSG_INVALID_INPUT="Ошибка: неверная ссылка."
+    MSG_PROMPT="Введите URL или magnet: "
+else
+    MSG_USAGE="Usage: fetch <URL or magnet link>"
+    MSG_DOWNLOADING="Downloading"
+    MSG_SAVED="File saved:"
+    MSG_MAGNET_ADDED="Magnet added, waiting for download..."
+    MSG_MAGNET_FAIL="Failed to add magnet."
+    MSG_TRANSMISSION_MISSING="Transmission not installed. Install: pkg install transmission (or sudo apt install transmission-cli)"
+    MSG_INVALID_INPUT="Error: invalid link."
+    MSG_PROMPT="Enter URL or magnet: "
+fi
+
+if [ -z "$1" ]; then
+    read -p "$MSG_PROMPT" input
+else
+    input="$1"
+fi
+
+if [ -z "$input" ]; then
+    echo "$MSG_INVALID_INPUT"
+    exit 1
+fi
+
+if [[ "$input" =~ ^magnet: ]]; then
+    # magnet
+    if ! command -v transmission-remote &>/dev/null; then
+        echo "$MSG_TRANSMISSION_MISSING"
+        exit 1
+    fi
+    pgrep transmission-da &>/dev/null || { transmission-daemon 2>/dev/null; sleep 2; }
+    echo "$MSG_MAGNET_ADDED"
+    out=$(transmission-remote -a "$input" 2>&1)
+    id=$(echo "$out" | grep -oP '(?<="id":)\d+')
+    if [ -z "$id" ]; then
+        echo "$MSG_MAGNET_FAIL"
+        exit 1
+    fi
+    while : ; do
+        pct=$(transmission-remote -t "$id" -i 2>/dev/null | awk '/Percent Done:/{print $3}' | tr -d '%')
+        [ "$pct" = "100" ] && break
+        printf "\r%s: %s%%" "$MSG_DOWNLOADING" "$pct"
+        sleep 2
+    done
+    echo ""
+    dl_dir=$(transmission-remote -t "$id" -i 2>/dev/null | awk '/Location:/{print $2}')
+    file=$(find "$dl_dir" -type f ! -name '*.torrent' | head -1)
+    if [ -z "$file" ]; then
+        echo "No file found"
+        exit 1
+    fi
+    cp "$file" "./$(basename "$file")"
+    echo "$MSG_SAVED $(basename "$file")"
+    transmission-remote -t "$id" --remove &>/dev/null
+else
+    # URL
+    filename=$(basename "$input" | sed 's/?.*//')
+    [ -z "$filename" ] && filename="downloaded_file"
+    echo "$MSG_DOWNLOADING $filename..."
+    curl -# -L -o "$filename" "$input"
+    echo "$MSG_SAVED $(pwd)/$filename"
+fi
