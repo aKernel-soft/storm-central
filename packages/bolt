@@ -1,32 +1,83 @@
 #!/bin/bash
-# Bolt – минимальный редактор для STORM
+# Bolt – lightning-fast text editor with pseudo-graphics and i18n
 set -e
 
-file="${1:-untitled.txt}"
-[ ! -f "$file" ] && touch "$file"
+# i18n
+if locale 2>/dev/null | grep -qi ru; then
+    TITLE="Bolt – Текстовый редактор"
+    PROMPT_FILE="Имя файла: "
+    CREATED="Создан новый файл"
+    LINES="Строк"
+    ADD_TEXT="Введите текст: "
+    SAVED="Сохранено."
+    QUIT_MSG="Выход (несохранённые изменения будут потеряны). Выйти? (y/n)"
+    COMMANDS="a=добавить  d<номер>=удалить  s=сохранить  q=выйти"
+    UNKNOWN="Неизвестная команда"
+else
+    TITLE="Bolt – Text Editor"
+    PROMPT_FILE="File name: "
+    CREATED="Created new file"
+    LINES="Lines"
+    ADD_TEXT="Enter text: "
+    SAVED="Saved."
+    QUIT_MSG="Quit (unsaved changes will be lost). Quit? (y/n)"
+    COMMANDS="a=add  d<num>=delete  s=save  q=quit"
+    UNKNOWN="Unknown command"
+fi
+
+file="${1:-}"
+if [ -z "$file" ]; then
+    read -p "$PROMPT_FILE" file
+    [ -z "$file" ] && file="untitled.txt"
+fi
+
+[ ! -f "$file" ] && touch "$file" && echo "$CREATED: $file"
 mapfile -t lines < "$file"
 
 while true; do
     clear
-    echo "=== BOLT ==="
-    echo "File: $file"
-    echo "Lines: ${#lines[@]}"
-    echo "---------------------"
+    echo "╔══════════════════════════════════════════╗"
+    printf "║  %-40s ║\n" "$TITLE"
+    echo "╠══════════════════════════════════════════╣"
+    printf "║  File: %-34s ║\n" "$file"
+    printf "║  Lines: %-33s ║\n" "${#lines[@]}"
+    echo "╠══════════════════════════════════════════╣"
     for i in "${!lines[@]}"; do
-        printf "%3d: %s\n" $((i+1)) "${lines[$i]}"
+        printf "║ %3d: %-36s ║\n" $((i+1)) "${lines[$i]}"
     done
-    echo ""
-    echo "a=add  d<N>=del  s=save  q=quit"
+    echo "╠══════════════════════════════════════════╣"
+    echo "║  $COMMANDS"
+    echo "╚══════════════════════════════════════════╝"
     read -p "> " cmd
     case "${cmd:0:1}" in
-        a)  read -p "Text: " txt
-            lines+=("$txt");;
-        d)  num="${cmd:1}"
-            [ -z "$num" ] && { echo "Need line number"; sleep 1; continue; }
-            [ "$num" -le "${#lines[@]}" ] && unset 'lines[num-1]' && lines=("${lines[@]}");;
-        s)  printf "%s\n" "${lines[@]}" > "$file"
-            echo "Saved."; sleep 1;;
-        q)  break;;
-        *)  echo "Unknown command"; sleep 1;;
+        a)
+            read -p "$ADD_TEXT" txt
+            lines+=("$txt")
+            ;;
+        d)
+            num="${cmd:1}"
+            if [ -z "$num" ] || ! [[ "$num" =~ ^[0-9]+$ ]]; then
+                echo "$UNKNOWN"; sleep 1
+                continue
+            fi
+            if [ "$num" -le "${#lines[@]}" ] && [ "$num" -ge 1 ]; then
+                unset 'lines[num-1]'
+                lines=("${lines[@]}")
+            else
+                echo "$UNKNOWN"; sleep 1
+            fi
+            ;;
+        s)
+            printf "%s\n" "${lines[@]}" > "$file"
+            echo "$SAVED"
+            sleep 1
+            ;;
+        q)
+            read -p "$QUIT_MSG" confirm
+            [[ "$confirm" =~ ^[yY] ]] && break
+            ;;
+        *)
+            echo "$UNKNOWN"; sleep 1
+            ;;
     esac
 done
