@@ -1,0 +1,11 @@
+#!/bin/bash
+# Recon – лёгкий ping-сканер
+[ -z "$1" ] && { echo "Usage: recon <CIDR> (e.g. 192.168.1.0/24)"; exit 1; }
+# Разбиваем сеть
+IFS='./' read -r ip mask <<< "$1"
+# Упрощённый перебор для /24
+base="${ip%.*}"
+for i in {1..254}; do
+    ( ping -c1 -W1 "$base.$i" &>/dev/null && echo "Host $base.$i is up" ) &
+done
+wait
