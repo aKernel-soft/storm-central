@@ -180,7 +180,7 @@ list() {
     setup_path
     clear
     echo "======== STOLER LIST ========"
-    echo "Developer: CKM SOFTWARE within STORM project"
+    echo "Developer: aKernel within STORM project"
     echo ""
 
     local tmp_list="$TMP_DIR/stoler_shop_list"
@@ -217,7 +217,7 @@ list() {
 
 help() {
     echo "STOLER - Decentralized Package Manager"
-    echo "Developer: CKM SOFTWARE within STORM project"
+    echo "Developer: aKernel within STORM project"
     echo "Usage: stoler {add|remote|list|install|publish|self-update|help}"
 }
 

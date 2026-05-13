@@ -1,0 +1,32 @@
+#!/bin/bash
+# Bolt – минимальный редактор для STORM
+set -e
+
+file="${1:-untitled.txt}"
+[ ! -f "$file" ] && touch "$file"
+mapfile -t lines < "$file"
+
+while true; do
+    clear
+    echo "=== BOLT ==="
+    echo "File: $file"
+    echo "Lines: ${#lines[@]}"
+    echo "---------------------"
+    for i in "${!lines[@]}"; do
+        printf "%3d: %s\n" $((i+1)) "${lines[$i]}"
+    done
+    echo ""
+    echo "a=add  d<N>=del  s=save  q=quit"
+    read -p "> " cmd
+    case "${cmd:0:1}" in
+        a)  read -p "Text: " txt
+            lines+=("$txt");;
+        d)  num="${cmd:1}"
+            [ -z "$num" ] && { echo "Need line number"; sleep 1; continue; }
+            [ "$num" -le "${#lines[@]}" ] && unset 'lines[num-1]' && lines=("${lines[@]}");;
+        s)  printf "%s\n" "${lines[@]}" > "$file"
+            echo "Saved."; sleep 1;;
+        q)  break;;
+        *)  echo "Unknown command"; sleep 1;;
+    esac
+done
