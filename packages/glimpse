@@ -1,0 +1,33 @@
+#!/bin/bash
+# Glimpse – image viewer for terminal
+set -e
+
+if locale 2>/dev/null | grep -qi ru; then
+    USAGE="Использование: glimpse <файл>"
+    NO_FILE="Файл не найден:"
+    TRYING="Просмотр"
+    INFO="Информация о файле"
+else
+    USAGE="Usage: glimpse <file>"
+    NO_FILE="File not found:"
+    TRYING="Displaying"
+    INFO="File info"
+fi
+
+file="$1"
+[ -z "$file" ] && { echo "$USAGE"; exit 1; }
+[ ! -f "$file" ] && { echo "$NO_FILE $file"; exit 1; }
+
+if command -v chafa &>/dev/null; then
+    echo "$TRYING with chafa..."
+    chafa "$file"
+elif command -v catimg &>/dev/null; then
+    echo "$TRYING with catimg..."
+    catimg "$file"
+else
+    echo "$INFO:"
+    file "$file"
+    if command -v identify &>/dev/null; then
+        identify "$file"
+    fi
+fi

@@ -83,6 +83,27 @@
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/fetch",
       "magnet": ""
+    },
+    {
+      "name": "flux",
+      "desc": "Flux – real-time network traffic monitor",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/flux",
+      "magnet": ""
+    },
+    {
+      "name": "eho",
+      "desc": "Eho – simple chat server/client",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/eho",
+      "magnet": ""
+    },
+    {
+      "name": "glimpse",
+      "desc": "Glimpse – terminal image viewer",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/glimpse",
+      "magnet": ""
     }
   ]
 }

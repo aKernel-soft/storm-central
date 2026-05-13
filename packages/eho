@@ -1,0 +1,47 @@
+#!/bin/bash
+# Eho – простой чат (сервер/клиент)
+set -e
+
+if locale 2>/dev/null | grep -qi ru; then
+    USAGE="Использование: eho server <порт>   |   eho client <хост> <порт>"
+    SERVER_START="Eho сервер запущен на порту"
+    CLIENT_START="Eho клиент подключился к"
+    EXIT_HELP="Введите /quit для выхода."
+else
+    USAGE="Usage: eho server <port>   |   eho client <host> <port>"
+    SERVER_START="Eho server listening on port"
+    CLIENT_START="Eho client connected to"
+    EXIT_HELP="Type /quit to exit."
+fi
+
+case "${1:-}" in
+    server)
+        port="${2:-1234}"
+        echo "$SERVER_START $port"
+        echo "$EXIT_HELP"
+        nc -l -p "$port" -c 'cat' 2>/dev/null || nc -l -p "$port" -e 'cat' 2>/dev/null
+        ;;
+    client)
+        host="${2:-localhost}"
+        port="${3:-1234}"
+        echo "$CLIENT_START $host:$port"
+        echo "$EXIT_HELP"
+        # Дуплекс через coproc
+        coproc nc "$host" "$port" 2>/dev/null || { echo "Connection failed"; exit 1; }
+        # Читаем из сокета и пишем на экран
+        while IFS= read -r line <&"${COPROC[0]}"; do
+            echo "$line"
+        done &
+        # Читаем с клавиатуры и отправляем в сокет
+        while IFS= read -r msg; do
+            if [ "$msg" = "/quit" ]; then
+                kill %1 2>/dev/null
+                break
+            fi
+            echo "$msg" >&"${COPROC[1]}"
+        done
+        ;;
+    *)
+        echo -e "$USAGE"
+        ;;
+esac

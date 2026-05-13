@@ -1,0 +1,62 @@
+#!/bin/bash
+# Flux – real-time network traffic monitor
+trap 'tput cnorm; clear; exit' INT TERM
+tput civis
+
+if locale 2>/dev/null | grep -qi ru; then
+    TITLE="Flux – Сетевой монитор"
+    IFACE_LABEL="Интерфейс: "
+    DOWN="Вниз"
+    UP="Вверх"
+    EXIT_MSG="Нажмите Ctrl+C для выхода"
+else
+    TITLE="Flux – Network Monitor"
+    IFACE_LABEL="Interface: "
+    DOWN="Down"
+    UP="Up"
+    EXIT_MSG="Press Ctrl+C to quit"
+fi
+
+iface="${1:-wlan0}"
+prev_rx=0; prev_tx=0
+if [ -f /sys/class/net/$iface/statistics/rx_bytes ]; then
+    prev_rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
+    prev_tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
+else
+    echo "Interface $iface not found."
+    exit 1
+fi
+
+while true; do
+    sleep 1
+    rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
+    tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
+    rx_diff=$((rx - prev_rx))
+    tx_diff=$((tx - prev_tx))
+    prev_rx=$rx; prev_tx=$tx
+
+    # Convert to human-readable
+    rx_speed=$(echo "scale=1; $rx_diff/1024" | bc)
+    tx_speed=$(echo "scale=1; $tx_diff/1024" | bc)
+
+    clear
+    echo "╔══════════════════════════════════════╗"
+    printf "║  %-36s ║\n" "$TITLE"
+    echo "╠══════════════════════════════════════╣"
+    printf "║  %s%-30s ║\n" "$IFACE_LABEL" "$iface"
+    printf "║  %s: %-8s KB/s                  ║\n" "$DOWN" "$rx_speed"
+    printf "║  %s: %-8s KB/s                  ║\n" "$UP" "$tx_speed"
+    echo "╠══════════════════════════════════════╣"
+    # Bar for down
+    max_bar=20
+    rx_bar_len=$(echo "$rx_speed / 10" | bc)
+    [ "$rx_bar_len" -gt "$max_bar" ] && rx_bar_len=$max_bar
+    rx_bar=$(printf "%${rx_bar_len}s" | tr ' ' '#')
+    printf "║  %-7s [%-20s] ║\n" "$DOWN" "$rx_bar"
+    tx_bar_len=$(echo "$tx_speed / 10" | bc)
+    [ "$tx_bar_len" -gt "$max_bar" ] && tx_bar_len=$max_bar
+    tx_bar=$(printf "%${tx_bar_len}s" | tr ' ' '#')
+    printf "║  %-7s [%-20s] ║\n" "$UP" "$tx_bar"
+    echo "╚══════════════════════════════════════╝"
+    echo "$EXIT_MSG"
+done
