@@ -71,8 +71,8 @@ install_pkg() {
     local fname=$(basename "$url")
     echo "[*] Downloading $url..."
     curl -sL -o "$D/downloads/$fname" "$url" && {
-      mkdir -p "$HOME/storage/downloads/STOLER"
-      cp "$D/downloads/$fname" "$HOME/storage/downloads/STOLER/"
+      mkdir -p "$HOME/stoler"
+      cp "$D/downloads/$fname" "$HOME/stoler/"
       echo "[+] Installed '$name' from URL."
       return 0
     }
@@ -96,8 +96,8 @@ install_pkg() {
       echo ""
       local file=$(find "$D/downloads" -type f ! -name '*.torrent' | head -1)
       [ -z "$file" ] && { echo "[!] No file."; return 1; }
-      mkdir -p "$HOME/storage/downloads/STOLER"
-      cp "$file" "$HOME/storage/downloads/STOLER/"
+      mkdir -p "$HOME/stoler"
+      cp "$file" "$HOME/stoler/"
       echo "[+] Installed '$name' via magnet."
       transmission-remote -t "$id" --remove
       return 0
