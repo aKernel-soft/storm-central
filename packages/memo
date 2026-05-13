@@ -1,28 +1,93 @@
 #!/bin/bash
-# Memo – быстрые заметки с датой
+# Memo – interactive notes manager with i18n
+
 NOTES="$HOME/.memo_notes"
 touch "$NOTES"
 
-case "${1:-}" in
-    add)
-        shift
-        [ $# -eq 0 ] && { echo "Usage: memo add <text>"; exit 1; }
-        echo "$(date '+%Y-%m-%d %H:%M') | $*" >> "$NOTES"
-        echo "Note added."
-        ;;
-    list)
-        [ ! -s "$NOTES" ] && { echo "No notes."; exit 0; }
+# Определяем язык
+if locale 2>/dev/null | grep -qi ru; then
+    TITLE="Memo – Заметки"
+    MENU_ADD="[a] Добавить заметку"
+    MENU_LIST="[l] Просмотреть"
+    MENU_DEL="[d] Удалить"
+    MENU_QUIT="[q] Выйти"
+    PROMPT="> "
+    NO_NOTES="Заметок пока нет."
+    ADD_PROMPT="Введите заметку: "
+    ADDED="Заметка добавлена."
+    DELETE_PROMPT="Удалить строку (номер или Enter для отмены): "
+    DELETED="Удалено."
+    INVALID="Неверный номер."
+    PRESS_ENTER="Нажмите Enter для продолжения..."
+else
+    TITLE="Memo – Quick Notes"
+    MENU_ADD="[a] Add note"
+    MENU_LIST="[l] List notes"
+    MENU_DEL="[d] Delete note"
+    MENU_QUIT="[q] Quit"
+    PROMPT="> "
+    NO_NOTES="No notes yet."
+    ADD_PROMPT="Enter your note: "
+    ADDED="Note added."
+    DELETE_PROMPT="Delete line number (or Enter to cancel): "
+    DELETED="Deleted."
+    INVALID="Invalid number."
+    PRESS_ENTER="Press Enter to continue..."
+fi
+
+show_menu() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║  $TITLE"
+    echo "╠════════════════════════════════════════╣"
+    echo "║  $MENU_ADD"
+    echo "║  $MENU_LIST"
+    echo "║  $MENU_DEL"
+    echo "║  $MENU_QUIT"
+    echo "╚════════════════════════════════════════╝"
+}
+
+list_notes() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║  $TITLE"
+    echo "╚════════════════════════════════════════╝"
+    if [ ! -s "$NOTES" ]; then
+        echo "  $NO_NOTES"
+    else
         nl -ba "$NOTES"
-        ;;
-    del)
-        [ -z "$2" ] && { echo "Usage: memo del <line number>"; exit 1; }
-        sed -i "${2}d" "$NOTES"
-        echo "Deleted line $2."
-        ;;
-    *)
-        echo "Memo – заметки в терминале"
-        echo "  add <text>    добавить заметку"
-        echo "  list          показать все"
-        echo "  del <номер>   удалить строку"
-        ;;
-esac
+    fi
+    echo ""
+    read -p "$PRESS_ENTER"
+}
+
+add_note() {
+    read -p "$ADD_PROMPT" note
+    [ -z "$note" ] && return
+    echo "$(date '+%Y-%m-%d %H:%M') | $note" >> "$NOTES"
+    echo "$ADDED"
+    sleep 1
+}
+
+delete_note() {
+    list_notes
+    read -p "$DELETE_PROMPT" num
+    [ -z "$num" ] && return
+    if sed -i "${num}d" "$NOTES" 2>/dev/null; then
+        echo "$DELETED"
+    else
+        echo "$INVALID"
+    fi
+    sleep 1
+}
+
+while true; do
+    show_menu
+    read -p "$PROMPT" choice
+    case "$choice" in
+        a|A) add_note;;
+        l|L) list_notes;;
+        d|D) delete_note;;
+        q|Q) break;;
+    esac
+done

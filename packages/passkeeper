@@ -1,48 +1,141 @@
 #!/bin/bash
-# PassKeeper – менеджер паролей с генератором
+# PassKeeper – password manager with i18n
+
 VAULT="$HOME/.passkeeper"
 mkdir -p "$VAULT"
+DATA="$VAULT/data"
+touch "$DATA"
+
+# Определяем язык
+if locale 2>/dev/null | grep -qi ru; then
+    TITLE="PassKeeper – Менеджер паролей"
+    MENU_ADD="[a] Добавить запись"
+    MENU_GET="[g] Показать пароль"
+    MENU_LIST="[l] Список сервисов"
+    MENU_DEL="[d] Удалить запись"
+    MENU_GEN="[p] Сгенерировать пароль"
+    MENU_QUIT="[q] Выйти"
+    PROMPT="> "
+    ADD_SERVICE="Имя сервиса: "
+    ADD_USER="Пользователь: "
+    ADD_PASS_PROMPT="Пароль (пусто для автогенерации): "
+    SAVED="Сохранено. Пароль: "
+    NOT_FOUND="Не найдено."
+    SERVICE="Сервис"
+    USER="Пользователь"
+    PASS="Пароль"
+    LIST_TITLE="Сохранённые сервисы"
+    NO_ENTRIES="Нет записей."
+    DELETE_PROMPT="Удалить сервис: "
+    DELETED="Удалено."
+    GEN_PROMPT="Длина [16]: "
+    PRESS_ENTER="Нажмите Enter..."
+else
+    TITLE="PassKeeper – Password Manager"
+    MENU_ADD="[a] Add entry"
+    MENU_GET="[g] Get password"
+    MENU_LIST="[l] List services"
+    MENU_DEL="[d] Delete entry"
+    MENU_GEN="[p] Generate password"
+    MENU_QUIT="[q] Quit"
+    PROMPT="> "
+    ADD_SERVICE="Service name: "
+    ADD_USER="Username: "
+    ADD_PASS_PROMPT="Password (empty to generate): "
+    SAVED="Saved. Password: "
+    NOT_FOUND="Not found."
+    SERVICE="Service"
+    USER="User"
+    PASS="Password"
+    LIST_TITLE="Saved Services"
+    NO_ENTRIES="No entries."
+    DELETE_PROMPT="Service to delete: "
+    DELETED="Deleted."
+    GEN_PROMPT="Length [16]: "
+    PRESS_ENTER="Press Enter..."
+fi
 
 generate_password() {
     local len="${1:-16}"
     tr -dc 'A-Za-z0-9!@#$%^&*()_+' </dev/urandom | head -c "$len"; echo
 }
 
-case "${1:-}" in
-    add)
-        read -p "Service name: " service
-        read -p "Username: " user
-        echo -n "Password (leave empty to generate): "
-        read -s pass; echo
-        [ -z "$pass" ] && pass=$(generate_password)
-        echo "$service:$user:$pass" >> "$VAULT/data"
-        echo "Saved. Password: $pass"
-        ;;
-    get)
-        [ -z "$2" ] && { echo "Usage: passkeeper get <service>"; exit 1; }
-        grep "^$2:" "$VAULT/data" | while IFS=: read s u p; do
-            echo "Service: $s"
-            echo "User: $u"
-            echo "Pass: $p"
-        done
-        ;;
-    list)
-        [ -f "$VAULT/data" ] && cut -d: -f1 "$VAULT/data" | sort -u || echo "No entries."
-        ;;
-    generate)
-        generate_password "$2"
-        ;;
-    delete)
-        [ -z "$2" ] && { echo "Usage: passkeeper del <service>"; exit 1; }
-        sed -i "/^$2:/d" "$VAULT/data"
-        echo "Deleted."
-        ;;
-    *)
-        echo "PassKeeper – менеджер паролей"
-        echo "  add          добавить запись"
-        echo "  get <name>   показать пароль"
-        echo "  list         список сервисов"
-        echo "  generate [N] сгенерировать пароль"
-        echo "  delete <name> удалить сервис"
-        ;;
-esac
+show_menu() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║  $TITLE"
+    echo "╠════════════════════════════════════════╣"
+    echo "║  $MENU_ADD"
+    echo "║  $MENU_GET"
+    echo "║  $MENU_LIST"
+    echo "║  $MENU_DEL"
+    echo "║  $MENU_GEN"
+    echo "║  $MENU_QUIT"
+    echo "╚════════════════════════════════════════╝"
+}
+
+add_entry() {
+    read -p "$ADD_SERVICE" service
+    [ -z "$service" ] && return
+    read -p "$ADD_USER" user
+    echo -n "$ADD_PASS_PROMPT"
+    read -s pass; echo
+    [ -z "$pass" ] && pass=$(generate_password)
+    echo "$service:$user:$pass" >> "$DATA"
+    echo "$SAVED $pass"
+    sleep 2
+}
+
+get_entry() {
+    read -p "$ADD_SERVICE" service
+    [ -z "$service" ] && return
+    found=$(grep "^$service:" "$DATA")
+    if [ -z "$found" ]; then
+        echo "$NOT_FOUND"
+    else
+        IFS=':' read s u p <<< "$found"
+        echo "$SERVICE: $s"
+        echo "$USER: $u"
+        echo "$PASS: $p"
+    fi
+    read -p "$PRESS_ENTER"
+}
+
+list_services() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║  $LIST_TITLE"
+    echo "╚════════════════════════════════════════╝"
+    if [ ! -s "$DATA" ]; then
+        echo "  $NO_ENTRIES"
+    else
+        cut -d: -f1 "$DATA" | sort -u | nl
+    fi
+    echo ""
+    read -p "$PRESS_ENTER"
+}
+
+delete_entry() {
+    read -p "$DELETE_PROMPT" service
+    [ -z "$service" ] && return
+    if grep -q "^$service:" "$DATA"; then
+        sed -i "/^$service:/d" "$DATA"
+        echo "$DELETED"
+    else
+        echo "$NOT_FOUND"
+    fi
+    sleep 1
+}
+
+while true; do
+    show_menu
+    read -p "$PROMPT" choice
+    case "$choice" in
+        a|A) add_entry;;
+        g|G) get_entry;;
+        l|L) list_services;;
+        d|D) delete_entry;;
+        p|P) read -p "$GEN_PROMPT" len; generate_password "${len:-16}"; read -p "$PRESS_ENTER";;
+        q|Q) break;;
+    esac
+done

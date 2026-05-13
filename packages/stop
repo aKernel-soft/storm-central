@@ -1,16 +1,54 @@
 #!/bin/bash
-# STop – простой системный монитор
+# STop – system monitor with pseudo-graphics and i18n
+
+trap 'tput cnorm; clear; exit' INT TERM
+tput civis
+
+# Определяем язык
+if locale 2>/dev/null | grep -qi ru; then
+    TITLE="STop – Монитор системы"
+    LOAD_TXT="Нагрузка"
+    MEM_TXT="Память"
+    SWAP_TXT="Своп"
+    PID="PID"
+    USER="ПОЛЬЗ"
+    CPU="%CPU"
+    MEM="%MEM"
+    CMD="КОМАНДА"
+    EXIT_MSG="Нажмите Ctrl+C для выхода"
+else
+    TITLE="STop – System Monitor"
+    LOAD_TXT="Load Average"
+    MEM_TXT="Memory"
+    SWAP_TXT="Swap"
+    PID="PID"
+    USER="USER"
+    CPU="%CPU"
+    MEM="%MEM"
+    CMD="COMMAND"
+    EXIT_MSG="Press Ctrl+C to quit"
+fi
+
 while true; do
+    load=$(awk '{print $1, $2, $3}' /proc/loadavg)
+    mem=$(free -m | awk '/Mem:/{printf "%d/%d MB", $3, $2}')
+    swap=$(free -m | awk '/Swap:/{printf "%d/%d MB", $3, $2}')
+    procs=$(ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -16)
+
     clear
-    echo "===== STOP ====="
-    echo "Uptime: $(uptime)"
-    echo ""
-    echo "Memory:"
-    free -h 2>/dev/null || cat /proc/meminfo | head -3
-    echo ""
-    echo "Top CPU processes:"
-    ps -eo pid,comm,%cpu --sort=-%cpu | head -6
-    echo ""
-    echo "Press Ctrl+C to exit"
-    sleep 3
+    echo "╔════════════════════════════════════════════════════════╗"
+    printf "║  %-52s ║\n" "$TITLE"
+    echo "╠════════════════════════════════════════════════════════╣"
+    printf "║  %s: %-42s ║\n" "$LOAD_TXT" "$load"
+    printf "║  %s: %-42s ║\n" "$MEM_TXT" "$mem"
+    printf "║  %s: %-42s ║\n" "$SWAP_TXT" "$swap"
+    echo "╠════════════════════════════════════════════════════════╣"
+    printf "║  %-6s %-12s %5s %5s %-20s ║\n" "$PID" "$USER" "$CPU" "$MEM" "$CMD"
+    echo "╠════════════════════════════════════════════════════════╣"
+    echo "$procs" | tail -n +2 | while read pid user cpu mem cmd; do
+        printf "║  %-6s %-12s %5s %5s %-20s ║\n" "$pid" "$user" "$cpu" "$mem" "${cmd:0:20}"
+    done
+    echo "╚════════════════════════════════════════════════════════╝"
+    echo "$EXIT_MSG"
+    sleep 2
 done
