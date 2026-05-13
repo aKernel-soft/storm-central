@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gale – clean text weather with 3-day forecast
+# Gale – weather with ASCII art for current weather and clean 3-day forecast
 
 CONFIG="$HOME/.gale_city"
 
@@ -10,9 +10,8 @@ if locale 2>/dev/null | grep -qi ru; then
     FETCHING="Загрузка погоды для"
     MENU_TITLE="Gale – Погода"
     OPT_NOW="[1] Сейчас"
-    OPT_TODAY="[2] Сегодня"
-    OPT_FORECAST="[3] Прогноз на 3 дня"
-    OPT_SET="[4] Сменить город"
+    OPT_FORECAST="[2] Прогноз на 3 дня"
+    OPT_SET="[3] Сменить город"
     OPT_QUIT="[q] Выход"
     CHOOSE="Выберите действие: "
     TODAY="Сегодня"
@@ -25,9 +24,8 @@ else
     FETCHING="Fetching weather for"
     MENU_TITLE="Gale – Weather"
     OPT_NOW="[1] Now"
-    OPT_TODAY="[2] Today"
-    OPT_FORECAST="[3] 3-day forecast"
-    OPT_SET="[4] Change city"
+    OPT_FORECAST="[2] 3-day forecast"
+    OPT_SET="[3] Change city"
     OPT_QUIT="[q] Quit"
     CHOOSE="Choose an option: "
     TODAY="Today"
@@ -54,7 +52,6 @@ show_menu() {
     echo "  $MENU_TITLE  |  $city"
     echo "=========================================="
     echo "  $OPT_NOW"
-    echo "  $OPT_TODAY"
     echo "  $OPT_FORECAST"
     echo "  $OPT_SET"
     echo "  $OPT_QUIT"
@@ -69,32 +66,30 @@ if [ -z "$1" ]; then
         read -r choice
         case "$choice" in
             1)
-                echo "$FETCHING $city..."
-                curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h\\n"
-                echo ""
+                # Current weather with ASCII art
+                curl -s "wttr.in/${city}?0q"
                 read -p "Press Enter to continue..."
                 ;;
             2)
-                echo "$FETCHING $city..."
+                echo "$FETCHING $city (3 days)..."
+                # Today
+                echo ""
+                echo "  $TODAY:"
                 curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h\\n"
+                # Tomorrow
+                tomorrow=$(date -d "+1 day" +%Y-%m-%d)
+                echo ""
+                echo "  $TOMORROW:"
+                curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h&date=$tomorrow\\n"
+                # Day after tomorrow
+                day_after=$(date -d "+2 days" +%Y-%m-%d)
+                echo ""
+                echo "  $DAY_AFTER:"
+                curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h&date=$day_after\\n"
                 echo ""
                 read -p "Press Enter to continue..."
                 ;;
             3)
-                echo "$FETCHING $city (3 days)..."
-                echo ""
-                echo "  $TODAY:"
-                curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h\\n"
-                echo ""
-                echo "  $TOMORROW:"
-                curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h\\n" 2>/dev/null
-                echo ""
-                echo "  $DAY_AFTER:"
-                curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h\\n" 2>/dev/null
-                echo ""
-                read -p "Press Enter to continue..."
-                ;;
-            4)
                 read -p "$PROMPT_CITY" new_city
                 [ -n "$new_city" ] && echo "$new_city" > "$CONFIG" && city="$new_city" && echo "$SAVED $new_city"
                 sleep 1
@@ -105,6 +100,6 @@ if [ -z "$1" ]; then
         esac
     done
 else
-    echo "$FETCHING $city..."
-    curl -s "wttr.in/${city}?format=%l:+%t+%w,+%h\\n"
+    # Quick mode: current weather only
+    curl -s "wttr.in/${city}?0q"
 fi
