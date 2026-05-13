@@ -9,7 +9,7 @@ Developer: **aKernel** within the **STORM** project.
 
 Install STOLER with a single command:
 ```bash
-curl -sL https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/install.sh | bash
+curl -sL https://raw.githubusercontent.com/aKernel-soft/storm-central/main/install.sh | bash
 ```
 
 After installation the central repository will be added automatically. Open the shop:
@@ -34,7 +34,7 @@ How It Works
    · Direct URL – downloaded via HTTP/HTTPS (fast, always available).
    · Magnet link – decentralized torrent download (requires transmission client and active seeders).
 3. STOLER update is performed with:
-      stoler self-update https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/stoler.sh.
+      stoler self-update https://raw.githubusercontent.com/aKernel/storm-central/main/packages/stoler.sh.
 
 ---
 
