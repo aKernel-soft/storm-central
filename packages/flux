@@ -1,5 +1,5 @@
 #!/bin/bash
-# Flux – network monitor with auto interface detection
+# Flux – network monitor with auto interface detection for Termux
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
 
@@ -23,41 +23,50 @@ fi
 
 iface="${1:-}"
 if [ -z "$iface" ]; then
-    # автоопределение: ищем первый интерфейс с rx_bytes
-    for if in wlan0 eth0 rmnet_data0 wlp2s0 enp2s0 enp3s0 wlan1; do
-        if [ -f /sys/class/net/$if/statistics/rx_bytes ]; then
-            iface="$if"
-            break
+    # автоопределение: ищем активный интерфейс через /proc/net/dev
+    iface=$(awk -F: 'NR>2 && $1!="lo" {gsub(/ /,"",$1); print $1; exit}' /proc/net/dev 2>/dev/null)
+    if [ -z "$iface" ]; then
+        # второй способ: через ip link (если доступен)
+        if command -v ip >/dev/null; then
+            iface=$(ip -o link show | awk -F': ' '{print $2}' | grep -v lo | head -1)
         fi
-    done
+    fi
     if [ -z "$iface" ]; then
         echo "$NO_IFACE"
-        ls /sys/class/net
+        awk -F: 'NR>2 {gsub(/ /,"",$1); print "  "$1}' /proc/net/dev
         echo "$SPECIFY"
         tput cnorm; exit 1
     fi
 fi
 
-if [ ! -f /sys/class/net/$iface/statistics/rx_bytes ]; then
+# проверяем, что интерфейс существует
+if ! grep -q "$iface" /proc/net/dev 2>/dev/null; then
     echo "Interface $iface not found."
     echo "Available:"
-    ls /sys/class/net
+    awk -F: 'NR>2 {gsub(/ /,"",$1); print "  "$1}' /proc/net/dev
     tput cnorm; exit 1
 fi
 
-prev_rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
-prev_tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
+# читаем начальные данные через /proc/net/dev
+read_net_stats() {
+    awk -v if="$iface" -F: 'NR>2 && $1~if {
+        split($2,a," "); gsub(/ +/," ",$2)
+        rx=a[1]; tx=a[9]
+        print rx, tx
+    }' /proc/net/dev
+}
+
+read prev_rx prev_tx < <(read_net_stats)
 
 while true; do
     sleep 1
-    rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
-    tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
+    read rx tx < <(read_net_stats)
     rx_diff=$((rx - prev_rx))
     tx_diff=$((tx - prev_tx))
     prev_rx=$rx; prev_tx=$tx
 
-    rx_speed=$(echo "scale=1; $rx_diff/1024" | bc 2>/dev/null || awk "BEGIN {printf \"%.1f\", $rx_diff/1024}")
-    tx_speed=$(echo "scale=1; $tx_diff/1024" | bc 2>/dev/null || awk "BEGIN {printf \"%.1f\", $tx_diff/1024}")
+    rx_speed=$(awk "BEGIN {printf \"%.1f\", $rx_diff/1024}")
+    tx_speed=$(awk "BEGIN {printf \"%.1f\", $tx_diff/1024}")
 
     clear
     echo "╔══════════════════════════════════════╗"
@@ -68,11 +77,11 @@ while true; do
     printf "║  %s: %-8s KB/s                  ║\n" "$UP" "$tx_speed"
     echo "╠══════════════════════════════════════╣"
     max_bar=20
-    rx_bar_len=$(echo "$rx_speed / 10" | bc 2>/dev/null || awk "BEGIN {printf \"%d\", $rx_speed/10}")
+    rx_bar_len=$(awk "BEGIN {printf \"%d\", $rx_speed/10}")
     [ "$rx_bar_len" -gt "$max_bar" ] && rx_bar_len=$max_bar
     rx_bar=$(printf "%${rx_bar_len}s" | tr ' ' '#')
     printf "║  %-7s [%-20s] ║\n" "$DOWN" "$rx_bar"
-    tx_bar_len=$(echo "$tx_speed / 10" | bc 2>/dev/null || awk "BEGIN {printf \"%d\", $tx_speed/10}")
+    tx_bar_len=$(awk "BEGIN {printf \"%d\", $tx_speed/10}")
     [ "$tx_bar_len" -gt "$max_bar" ] && tx_bar_len=$max_bar
     tx_bar=$(printf "%${tx_bar_len}s" | tr ' ' '#')
     printf "║  %-7s [%-20s] ║\n" "$UP" "$tx_bar"
