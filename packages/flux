@@ -1,90 +1,124 @@
 #!/bin/bash
-# Flux – network monitor with auto interface detection for Termux
+# Flux – network monitor (full on PC, mobile mode on Termux)
+set -e
+
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
 
+# Определяем среду
+if [ -n "$PREFIX" ] && [ -d "$PREFIX" ]; then
+    IS_TERMUX=true
+else
+    IS_TERMUX=false
+fi
+
+# ========== i18n ==========
 if locale 2>/dev/null | grep -qi ru; then
-    TITLE="Flux – Сетевой монитор"
+    TITLE_FULL="Flux – Сетевой монитор"
+    TITLE_MOBILE="Flux-M – Мобильный сетевой монитор"
     IFACE_LABEL="Интерфейс:"
     DOWN="Вниз"
     UP="Вверх"
     EXIT_MSG="Нажмите Ctrl+C для выхода"
     NO_IFACE="Не указан интерфейс. Доступные:"
     SPECIFY="Укажите интерфейс: flux <интерфейс>"
+    MOBILE_IFACES="Доступные интерфейсы:"
+    MOBILE_PING="Пинг до 8.8.8.8:"
 else
-    TITLE="Flux – Network Monitor"
+    TITLE_FULL="Flux – Network Monitor"
+    TITLE_MOBILE="Flux-M – Mobile Network Monitor"
     IFACE_LABEL="Interface:"
     DOWN="Down"
     UP="Up"
     EXIT_MSG="Press Ctrl+C to quit"
     NO_IFACE="No interface specified. Available:"
     SPECIFY="Specify interface: flux <interface>"
+    MOBILE_IFACES="Available interfaces:"
+    MOBILE_PING="Ping to 8.8.8.8:"
 fi
 
-iface="${1:-}"
-if [ -z "$iface" ]; then
-    # автоопределение: ищем активный интерфейс через /proc/net/dev
-    iface=$(awk -F: 'NR>2 && $1!="lo" {gsub(/ /,"",$1); print $1; exit}' /proc/net/dev 2>/dev/null)
+# ========== ПОЛНОЦЕННЫЙ FLUX ДЛЯ ПК ==========
+flux_full() {
+    iface="${1:-}"
     if [ -z "$iface" ]; then
-        # второй способ: через ip link (если доступен)
-        if command -v ip >/dev/null; then
-            iface=$(ip -o link show | awk -F': ' '{print $2}' | grep -v lo | head -1)
+        # автоопределение через /sys/class/net
+        for if in wlan0 eth0 wlp2s0 enp2s0 enp3s0; do
+            [ -f "/sys/class/net/$if/statistics/rx_bytes" ] && iface="$if" && break
+        done
+        if [ -z "$iface" ]; then
+            echo "$NO_IFACE"
+            ls /sys/class/net 2>/dev/null || echo "No /sys/class/net"
+            echo "$SPECIFY"
+            exit 1
         fi
     fi
-    if [ -z "$iface" ]; then
-        echo "$NO_IFACE"
-        awk -F: 'NR>2 {gsub(/ /,"",$1); print "  "$1}' /proc/net/dev
-        echo "$SPECIFY"
-        tput cnorm; exit 1
+
+    if [ ! -f "/sys/class/net/$iface/statistics/rx_bytes" ]; then
+        echo "Interface $iface not found."
+        ls /sys/class/net
+        exit 1
     fi
-fi
 
-# проверяем, что интерфейс существует
-if ! grep -q "$iface" /proc/net/dev 2>/dev/null; then
-    echo "Interface $iface not found."
-    echo "Available:"
-    awk -F: 'NR>2 {gsub(/ /,"",$1); print "  "$1}' /proc/net/dev
-    tput cnorm; exit 1
-fi
+    prev_rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
+    prev_tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
 
-# читаем начальные данные через /proc/net/dev
-read_net_stats() {
-    awk -v if="$iface" -F: 'NR>2 && $1~if {
-        split($2,a," "); gsub(/ +/," ",$2)
-        rx=a[1]; tx=a[9]
-        print rx, tx
-    }' /proc/net/dev
+    while true; do
+        sleep 1
+        rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
+        tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
+        rx_diff=$((rx - prev_rx))
+        tx_diff=$((tx - prev_tx))
+        prev_rx=$rx; prev_tx=$tx
+
+        rx_speed=$(awk "BEGIN {printf \"%.1f\", $rx_diff/1024}")
+        tx_speed=$(awk "BEGIN {printf \"%.1f\", $tx_diff/1024}")
+
+        clear
+        echo "╔══════════════════════════════════════╗"
+        printf "║  %-36s ║\n" "$TITLE_FULL"
+        echo "╠══════════════════════════════════════╣"
+        printf "║  %s %-31s ║\n" "$IFACE_LABEL" "$iface"
+        printf "║  %s: %-8s KB/s                  ║\n" "$DOWN" "$rx_speed"
+        printf "║  %s: %-8s KB/s                  ║\n" "$UP" "$tx_speed"
+        echo "╠══════════════════════════════════════╣"
+        max_bar=20
+        rx_bar_len=$(awk "BEGIN {printf \"%d\", $rx_speed/10}")
+        [ "$rx_bar_len" -gt "$max_bar" ] && rx_bar_len=$max_bar
+        rx_bar=$(printf "%${rx_bar_len}s" | tr ' ' '#')
+        printf "║  %-7s [%-20s] ║\n" "$DOWN" "$rx_bar"
+        tx_bar_len=$(awk "BEGIN {printf \"%d\", $tx_speed/10}")
+        [ "$tx_bar_len" -gt "$max_bar" ] && tx_bar_len=$max_bar
+        tx_bar=$(printf "%${tx_bar_len}s" | tr ' ' '#')
+        printf "║  %-7s [%-20s] ║\n" "$UP" "$tx_bar"
+        echo "╚══════════════════════════════════════╝"
+        echo "$EXIT_MSG"
+    done
 }
 
-read prev_rx prev_tx < <(read_net_stats)
-
-while true; do
-    sleep 1
-    read rx tx < <(read_net_stats)
-    rx_diff=$((rx - prev_rx))
-    tx_diff=$((tx - prev_tx))
-    prev_rx=$rx; prev_tx=$tx
-
-    rx_speed=$(awk "BEGIN {printf \"%.1f\", $rx_diff/1024}")
-    tx_speed=$(awk "BEGIN {printf \"%.1f\", $tx_diff/1024}")
-
+# ========== FLUX-M ДЛЯ TERMUX ==========
+flux_mobile() {
     clear
     echo "╔══════════════════════════════════════╗"
-    printf "║  %-36s ║\n" "$TITLE"
+    printf "║  %-36s ║\n" "$TITLE_MOBILE"
     echo "╠══════════════════════════════════════╣"
-    printf "║  %s %-31s ║\n" "$IFACE_LABEL" "$iface"
-    printf "║  %s: %-8s KB/s                  ║\n" "$DOWN" "$rx_speed"
-    printf "║  %s: %-8s KB/s                  ║\n" "$UP" "$tx_speed"
+    echo "║  $MOBILE_IFACES"
+    # Показываем интерфейсы через ifconfig или ip
+    if command -v ifconfig &>/dev/null; then
+        ifconfig | awk '/^[a-z]/{print "║    " $1}' 2>/dev/null || echo "║    (none)"
+    elif command -v ip &>/dev/null; then
+        ip -o link show | awk -F': ' '{print "║    "$2}' || echo "║    (none)"
+    fi
     echo "╠══════════════════════════════════════╣"
-    max_bar=20
-    rx_bar_len=$(awk "BEGIN {printf \"%d\", $rx_speed/10}")
-    [ "$rx_bar_len" -gt "$max_bar" ] && rx_bar_len=$max_bar
-    rx_bar=$(printf "%${rx_bar_len}s" | tr ' ' '#')
-    printf "║  %-7s [%-20s] ║\n" "$DOWN" "$rx_bar"
-    tx_bar_len=$(awk "BEGIN {printf \"%d\", $tx_speed/10}")
-    [ "$tx_bar_len" -gt "$max_bar" ] && tx_bar_len=$max_bar
-    tx_bar=$(printf "%${tx_bar_len}s" | tr ' ' '#')
-    printf "║  %-7s [%-20s] ║\n" "$UP" "$tx_bar"
+    echo "║  $MOBILE_PING"
+    ping -c3 8.8.8.8 2>&1 | tail -1 | awk '{print "║    "$0}'
     echo "╚══════════════════════════════════════╝"
     echo "$EXIT_MSG"
-done
+    sleep 2
+}
+
+# ========== MAIN ==========
+if $IS_TERMUX; then
+    flux_mobile
+else
+    flux_full "$1"
+fi
