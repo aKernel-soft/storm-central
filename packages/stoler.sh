@@ -22,6 +22,16 @@ REMOTE_DIR="$D/repos/remotes"
 mkdir -p "$REMOTE_DIR"
 [ ! -f "$LOCAL_INDEX" ] && echo '{"projects":[]}' > "$LOCAL_INDEX"
 
+# ---------- автоматическое добавление ~/stoler в PATH ----------
+setup_path() {
+    if [ -f "$HOME/.bashrc" ]; then
+        if ! grep -q "$DOWNLOAD_BASE" "$HOME/.bashrc"; then
+            echo "export PATH=\"$DOWNLOAD_BASE:\$PATH\"" >> "$HOME/.bashrc"
+            echo "[*] Added $DOWNLOAD_BASE to PATH in .bashrc. Restart shell or run: source ~/.bashrc"
+        fi
+    fi
+}
+
 # ---------- список всех пакетов ----------
 list_all() {
     [ -f "$LOCAL_INDEX" ] && jq -r '.projects[] | "\(.name) [\(.type)] - \(.desc)"' "$LOCAL_INDEX" 2>/dev/null || true
@@ -72,25 +82,30 @@ find_pkg() {
     return 1
 }
 
-# ---------- установка пакета ----------
+# ---------- установка пакета (улучшенная) ----------
 install_pkg() {
     local name="$1"
     local info magnet type url
     info=$(find_pkg "$name") || { echo "[!] Package '$name' not found."; return 1; }
     IFS='|' read -r magnet type url <<< "$info"
 
+    # 1. Прямой URL
     if [ -n "$url" ] && [ "$url" != "null" ]; then
         local fname=$(basename "$url")
+        local target="$DOWNLOAD_BASE/$name"
         echo "[*] Downloading $url..."
         curl -sL -o "$D/downloads/$fname" "$url" && {
             mkdir -p "$DOWNLOAD_BASE"
-            cp "$D/downloads/$fname" "$DOWNLOAD_BASE/" && chmod +x "$DOWNLOAD_BASE/$fname"
-            echo "[+] Installed '$name' from URL into $DOWNLOAD_BASE."
+            cp "$D/downloads/$fname" "$target"
+            chmod +x "$target" 2>/dev/null || true
+            setup_path
+            echo "[+] Installed '$name'. Run it with: $name"
             return 0
         }
         echo "[!] URL failed."
     fi
 
+    # 2. Magnet
     if [ -n "$magnet" ] && [ "$magnet" != "null" ]; then
         if command -v transmission-remote >/dev/null; then
             pgrep transmission-da >/dev/null 2>&1 || { transmission-daemon 2>/dev/null; sleep 2; }
@@ -108,9 +123,12 @@ install_pkg() {
             echo ""
             local file=$(find "$D/downloads" -type f ! -name '*.torrent' | head -1)
             [ -z "$file" ] && { echo "[!] No file."; return 1; }
+            local target="$DOWNLOAD_BASE/$name"
             mkdir -p "$DOWNLOAD_BASE"
-            cp "$file" "$DOWNLOAD_BASE/" && chmod +x "$DOWNLOAD_BASE/$(basename "$file")"
-            echo "[+] Installed '$name' via magnet into $DOWNLOAD_BASE."
+            cp "$file" "$target"
+            chmod +x "$target" 2>/dev/null || true
+            setup_path
+            echo "[+] Installed '$name'. Run it with: $name"
             transmission-remote -t "$id" --remove
             return 0
         else
@@ -159,6 +177,7 @@ self_update() {
 
 # ---------- интерактивный список (магазин) ----------
 list() {
+    setup_path
     clear
     echo "======== STOLER LIST ========"
     echo "Developer: CKM SOFTWARE within STORM project"
