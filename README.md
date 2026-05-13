@@ -58,7 +58,4 @@ Adding Your Own Package
 
 License
 
-The project is distributed under the MIT license.
-All programs inside this repository belong to their respective authors.
 
-© aKernel, 2025–2026. All rights reserved.
