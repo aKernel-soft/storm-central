@@ -1,0 +1,25 @@
+{
+  "projects": [
+    {
+      "name": "stoler",
+      "desc": "STOLER package manager (self-update)",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/stoler.sh",
+      "magnet": ""
+    },
+    {
+      "name": "ckm-launcher",
+      "desc": "CKM Launcher - file manager with .ckmenc encryption",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/ckm.py",
+      "magnet": ""
+    },
+    {
+      "name": "ckm-ihp",
+      "desc": "CKM IHP - Internet Hacking Program (SYN flood stress tester)",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/ckm-ihp.sh",
+      "magnet": ""
+    }
+  ]
+}
