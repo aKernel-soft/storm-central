@@ -15,7 +15,7 @@ def t(key):
         "quit_unsaved": {"en": "Unsaved changes! Quit anyway? (y/n)", "ru": "Есть несохранённые изменения! Выйти? (y/n)"},
         "help_line": {"en": "^S Save  ^X Exit  Arrows: move", "ru": "^S Сохранить  ^X Выйти  Стрелки: перемещение"},
     }
-    return texts[key].get(lang, texts[key]["en"])
+    return texts[key].get(get_lang(), texts[key]["en"])
 
 # ---------- main ----------
 def main(stdscr):
