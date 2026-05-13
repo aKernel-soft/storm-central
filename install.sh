@@ -81,12 +81,12 @@ echo "[1/4] Installing dependencies..."
 install_deps
 
 echo "[2/4] Downloading STOLER..."
-STOLER_URL="https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/packages/stoler.sh"
+STOLER_URL="https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stoler.sh"
 curl -sL "$STOLER_URL" -o "$BIN_DIR/stoler"
 chmod +x "$BIN_DIR/stoler"
 
 echo "[3/4] Adding official repository..."
-stoler remote add storm-central https://raw.githubusercontent.com/CKM-SOFT/storm-central/main/index.json 2>/dev/null || true
+stoler remote add storm-central https://raw.githubusercontent.com/aKernel-soft/storm-central/main/index.json 2>/dev/null || true
 
 echo "[4/4] Finalizing..."
 
