@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gale – weather with forecast and saved default city
+# Gale – weather with compact forecast and saved default city
 
 CONFIG="$HOME/.gale_city"
 
@@ -44,14 +44,14 @@ fi
 # Меню
 show_menu() {
     clear
-    echo "╔════════════════════════════════════════╗"
-    echo "║  $MENU_TITLE"
-    echo "╠════════════════════════════════════════╣"
-    echo "║  $OPT_NOW"
-    echo "║  $OPT_FORECAST"
-    echo "║  $OPT_SET"
-    echo "║  $OPT_QUIT"
-    echo "╚════════════════════════════════════════╝"
+    echo "=========================================="
+    echo "  $MENU_TITLE  |  $city"
+    echo "=========================================="
+    echo "  $OPT_NOW"
+    echo "  $OPT_FORECAST"
+    echo "  $OPT_SET"
+    echo "  $OPT_QUIT"
+    echo "=========================================="
     echo ""
     printf "%s" "$CHOOSE"
 }
@@ -64,13 +64,15 @@ if [ -z "$1" ]; then
         case "$choice" in
             1)
                 echo "$FETCHING $city..."
-                curl -s "wttr.in/${city}?0q"
+                # Компактный формат: только текст, без графики
+                curl -s "wttr.in/${city}?format=%l:+%t+%w+%h\\n"
                 echo ""
                 read -p "Press Enter to continue..."
                 ;;
             2)
                 echo "$FETCHING $city (3 days)..."
-                curl -s "wttr.in/${city}?2q"
+                # Прогноз без графики
+                curl -s "wttr.in/${city}?format=3"
                 echo ""
                 read -p "Press Enter to continue..."
                 ;;
@@ -85,7 +87,7 @@ if [ -z "$1" ]; then
         esac
     done
 else
-    # Быстрый режим: gale London – сразу текущая погода
+    # Быстрый режим
     echo "$FETCHING $city..."
-    curl -s "wttr.in/${city}?0q"
+    curl -s "wttr.in/${city}?format=%l:+%t+%w+%h\\n"
 fi
