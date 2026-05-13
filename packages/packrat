@@ -1,19 +1,97 @@
 #!/bin/bash
-# PackRat – быстрая упаковка/распаковка
+# PackRat – universal archiver with i18n
+
+# i18n
+if locale 2>/dev/null | grep -qi ru; then
+    TITLE="PackRat – Архиватор"
+    USAGE="Использование: packrat <команда> <объект> [формат]"
+    CMD_PACK="упаковать"
+    CMD_UNPACK="распаковать"
+    FORMAT_PROMPT="Выберите формат (zip/tar.xz/tar.gz/tar.bz2/tar/7z): "
+    INVALID="Неизвестная команда"
+    CREATED="Архив создан:"
+    EXTRACTED="Извлечено в текущую папку"
+    NO_OBJ="Укажите файл или папку"
+else
+    TITLE="PackRat – Archiver"
+    USAGE="Usage: packrat <command> <object> [format]"
+    CMD_PACK="pack"
+    CMD_UNPACK="unpack"
+    FORMAT_PROMPT="Choose format (zip/tar.xz/tar.gz/tar.bz2/tar/7z): "
+    INVALID="Unknown command"
+    CREATED="Archive created:"
+    EXTRACTED="Extracted to current folder"
+    NO_OBJ="Specify a file or folder"
+fi
+
+show_menu() {
+    clear
+    echo "╔════════════════════════════════════════╗"
+    echo "║  $TITLE"
+    echo "╠════════════════════════════════════════╣"
+    echo "║  [p] $CMD_PACK                         "
+    echo "║  [u] $CMD_UNPACK                       "
+    echo "║  [q] Quit                              "
+    echo "╚════════════════════════════════════════╝"
+}
+
 case "${1:-}" in
-    pack)
-        [ -z "$2" ] && { echo "Usage: packrat pack <folder>"; exit 1; }
-        tar -cJf "${2}.tar.xz" "$2"
-        echo "Created ${2}.tar.xz"
+    pack|p)
+        obj="${2:-}"
+        fmt="${3:-}"
+        [ -z "$obj" ] && { echo "$NO_OBJ"; exit 1; }
+        [ -z "$fmt" ] && { read -p "$FORMAT_PROMPT" fmt; }
+        case "$fmt" in
+            zip)
+                [ -d "$obj" ] && zip -r "${obj}.zip" "$obj" || zip "${obj}.zip" "$obj"
+                echo "$CREATED ${obj}.zip"
+                ;;
+            tar.xz|txz)
+                tar -cJf "${obj}.tar.xz" "$obj"
+                echo "$CREATED ${obj}.tar.xz"
+                ;;
+            tar.gz|tgz)
+                tar -czf "${obj}.tar.gz" "$obj"
+                echo "$CREATED ${obj}.tar.gz"
+                ;;
+            tar.bz2|tbz2)
+                tar -cjf "${obj}.tar.bz2" "$obj"
+                echo "$CREATED ${obj}.tar.bz2"
+                ;;
+            tar)
+                tar -cf "${obj}.tar" "$obj"
+                echo "$CREATED ${obj}.tar"
+                ;;
+            7z)
+                command -v 7z >/dev/null || { echo "Install 7z first"; exit 1; }
+                7z a "${obj}.7z" "$obj"
+                echo "$CREATED ${obj}.7z"
+                ;;
+            *)
+                echo "$INVALID"; exit 1
+                ;;
+        esac
         ;;
-    unpack)
-        [ -z "$2" ] && { echo "Usage: packrat unpack <archive>"; exit 1; }
-        tar -xf "$2"
-        echo "Extracted $2"
+    unpack|u)
+        obj="${2:-}"
+        [ -z "$obj" ] && { echo "$NO_OBJ"; exit 1; }
+        tar -xf "$obj" 2>/dev/null && echo "$EXTRACTED" && exit 0
+        unzip "$obj" 2>/dev/null && echo "$EXTRACTED" && exit 0
+        command -v 7z >/dev/null && 7z x "$obj" 2>/dev/null && echo "$EXTRACTED" && exit 0
+        echo "$INVALID"
         ;;
     *)
-        echo "PackRat – архиватор"
-        echo "  pack   <folder>   -> folder.tar.xz"
-        echo "  unpack <archive>  -> extract"
+        show_menu
+        read -p "> " cmd
+        [ -z "$cmd" ] && exit 0
+        if [ "$cmd" = "p" ] || [ "$cmd" = "u" ]; then
+            read -p "Object: " obj
+            if [ "$cmd" = "p" ]; then
+                read -p "$FORMAT_PROMPT" fmt
+                bash "$0" pack "$obj" "$fmt"
+            else
+                bash "$0" unpack "$obj"
+            fi
+        fi
         ;;
 esac

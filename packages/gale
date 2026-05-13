@@ -1,4 +1,33 @@
 #!/bin/bash
-# Gale – погода через wttr.in
-city="${1:-Moscow}"
-curl -s "wttr.in/${city}?0q" || echo "No internet?"
+# Gale – weather with saved default city
+
+CONFIG="$HOME/.gale_city"
+
+if locale 2>/dev/null | grep -qi ru; then
+    PROMPT_CITY="Введите город по умолчанию: "
+    PROMPT_NO_CITY="Город не задан. Введите город сейчас: "
+    SAVED="Город сохранён:"
+    FETCHING="Загрузка погоды для"
+else
+    PROMPT_CITY="Enter default city: "
+    PROMPT_NO_CITY="No default city set. Enter city now: "
+    SAVED="City saved:"
+    FETCHING="Fetching weather for"
+fi
+
+city="${1:-}"
+
+# Если город не передан аргументом
+if [ -z "$city" ]; then
+    if [ -f "$CONFIG" ]; then
+        city=$(cat "$CONFIG")
+    else
+        read -p "$PROMPT_NO_CITY" city
+        [ -z "$city" ] && city="Moscow"
+        echo "$city" > "$CONFIG"
+        echo "$SAVED $city"
+    fi
+fi
+
+echo "$FETCHING $city..."
+curl -s "wttr.in/${city}?0q"

@@ -1,11 +1,23 @@
 #!/bin/bash
-# Recon – лёгкий ping-сканер
-[ -z "$1" ] && { echo "Usage: recon <CIDR> (e.g. 192.168.1.0/24)"; exit 1; }
-# Разбиваем сеть
+# Recon – network scanner with i18n
+
+if locale 2>/dev/null | grep -qi ru; then
+    USAGE="Использование: recon <CIDR> (например, 192.168.1.0/24)"
+    SCANNING="Сканирование сети"
+    HOST_UP="Хост"
+    HOST_UP_SUFFIX="активен"
+else
+    USAGE="Usage: recon <CIDR> (e.g. 192.168.1.0/24)"
+    SCANNING="Scanning network"
+    HOST_UP="Host"
+    HOST_UP_SUFFIX="is up"
+fi
+
+[ -z "$1" ] && { echo "$USAGE"; exit 1; }
 IFS='./' read -r ip mask <<< "$1"
-# Упрощённый перебор для /24
 base="${ip%.*}"
+echo "$SCANNING $base.0/$mask..."
 for i in {1..254}; do
-    ( ping -c1 -W1 "$base.$i" &>/dev/null && echo "Host $base.$i is up" ) &
+    ( ping -c1 -W1 "$base.$i" &>/dev/null && echo "$HOST_UP $base.$i $HOST_UP_SUFFIX" ) &
 done
 wait

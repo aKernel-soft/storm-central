@@ -1,8 +1,14 @@
 #!/bin/bash
-# Abacus – консольный калькулятор
+# Abacus – console calculator with i18n
+
+if locale 2>/dev/null | grep -qi ru; then
+    USAGE="Использование: abacus <выражение> (например, abacus 2+2*4)"
+else
+    USAGE="Usage: abacus <expression> (e.g. abacus 2+2*4)"
+fi
+
 expr="${*}"
-[ -z "$expr" ] && { echo "Usage: abacus <expression>"; echo "Example: abacus 2+2*4"; exit 1; }
-# Используем bc, если есть, иначе awk
+[ -z "$expr" ] && { echo "$USAGE"; exit 1; }
 if command -v bc >/dev/null; then
     echo "$expr" | bc -l
 else
