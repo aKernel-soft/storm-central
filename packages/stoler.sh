@@ -11,7 +11,7 @@ mkdir -p "$REMOTE_DIR"
 [ ! -f "$LOCAL_INDEX" ] && echo '{"projects":[]}' > "$LOCAL_INDEX"
 
 # ---------- список всех пакетов ----------
-list() {
+list_all() {
   [ -f "$LOCAL_INDEX" ] && jq -r '.projects[] | "\(.name) [\(.type)] - \(.desc)"' "$LOCAL_INDEX" 2>/dev/null || true
   for f in "$REMOTE_DIR"/*.json; do
     [ -f "$f" ] && jq -r '.projects[] | "\(.name) [\(.type)] - \(.desc)"' "$f" 2>/dev/null || true
@@ -145,15 +145,15 @@ self_update() {
   } || echo "[!] Update failed."
 }
 
-# ---------- магазин (исправлен) ----------
-shop() {
+# ---------- интерактивный список (бывший shop, теперь list) ----------
+list() {
   clear
-  echo "======== STOLER SHOP ========"
+  echo "======== STOLER LIST ========"
   echo "Developer: CKM SOFTWARE within STORM project"
   echo ""
 
   local tmp_list="$PREFIX/tmp/stoler_shop_list"
-  list > "$tmp_list" 2>/dev/null || true
+  list_all > "$tmp_list" 2>/dev/null || true
 
   local i=1
   declare -A pkg_map
@@ -178,16 +178,16 @@ shop() {
   if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice > 0 && choice < i )); then
     install_pkg "${pkg_map[$choice]}"
   elif [ "$choice" = "0" ]; then
-    echo "Shop closed."
+    echo "STOLER closed."
   else
     echo "[!] Invalid choice."
   fi
 }
 
 help() {
-  echo "STOLER - Decentralized Package Manager"
+  echo "STOLER - Package Manager"
   echo "Developer: CKM SOFTWARE within STORM project"
-  echo "Usage: stoler {update|list|install|publish|shop|help}"
+  echo "Usage: stoler {add|remote|list|install|publish|self-update|help}"
 }
 
 case "${1:-}" in
@@ -197,7 +197,6 @@ case "${1:-}" in
   install) install_pkg "$2";;
   publish) publish_file "$2";;
   self-update) self_update "$2";;
-  shop)    shop;;
   help|--help|-h) help;;
   *)       help;;
 esac
