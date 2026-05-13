@@ -1,7 +1,7 @@
 # STOLER Central Repository
 
 Official package index for **STOLER** – a decentralized package manager using magnet links and direct URLs.  
-Developer: **CKM SOFTWARE** within the **STORM** project.
+Developer: **aKernel** within the **STORM** project.
 
 ---
 
@@ -61,4 +61,4 @@ License
 The project is distributed under the MIT license.
 All programs inside this repository belong to their respective authors.
 
-© CKM SOFTWARE, 2025–2026. All rights reserved.
+© aKernel, 2025–2026. All rights reserved.
