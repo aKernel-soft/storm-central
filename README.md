@@ -54,8 +54,3 @@ Adding Your Own Package
    ```
 4. Submit a Pull Request. Once merged, the package becomes available to everyone.
 
----
-
-License
-
-
