@@ -63,20 +63,17 @@ if [ -z "$1" ]; then
                 ;;
             2)
                 echo "Fetching 3-day forecast for $city..."
-                # JSON API
                 json=$(curl -s "wttr.in/${city}?format=j1")
                 if ! echo "$json" | jq empty 2>/dev/null; then
                     echo "Failed to get forecast data."
                     read -p "Press Enter..."
                     continue
                 fi
-                # Extract 3 days
                 for i in 0 1 2; do
                     date=$(echo "$json" | jq -r ".weather[$i].date")
                     max=$(echo "$json" | jq -r ".weather[$i].maxtempC")
                     min=$(echo "$json" | jq -r ".weather[$i].mintempC")
                     code=$(echo "$json" | jq -r ".weather[$i].hourly[4].weatherCode")
-                    # Map code to symbol (simplified)
                     case "$code" in
                         113) sym="☀️";;
                         116) sym="⛅";;
