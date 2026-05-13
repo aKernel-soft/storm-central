@@ -1,31 +1,52 @@
 #!/bin/bash
-# Flux – real-time network traffic monitor
+# Flux – network monitor with auto interface detection
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
 
 if locale 2>/dev/null | grep -qi ru; then
     TITLE="Flux – Сетевой монитор"
-    IFACE_LABEL="Интерфейс: "
+    IFACE_LABEL="Интерфейс:"
     DOWN="Вниз"
     UP="Вверх"
     EXIT_MSG="Нажмите Ctrl+C для выхода"
+    NO_IFACE="Не указан интерфейс. Доступные:"
+    SPECIFY="Укажите интерфейс: flux <интерфейс>"
 else
     TITLE="Flux – Network Monitor"
-    IFACE_LABEL="Interface: "
+    IFACE_LABEL="Interface:"
     DOWN="Down"
     UP="Up"
     EXIT_MSG="Press Ctrl+C to quit"
+    NO_IFACE="No interface specified. Available:"
+    SPECIFY="Specify interface: flux <interface>"
 fi
 
-iface="${1:-wlan0}"
-prev_rx=0; prev_tx=0
-if [ -f /sys/class/net/$iface/statistics/rx_bytes ]; then
-    prev_rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
-    prev_tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
-else
-    echo "Interface $iface not found."
-    exit 1
+iface="${1:-}"
+if [ -z "$iface" ]; then
+    # автоопределение: ищем первый интерфейс с rx_bytes
+    for if in wlan0 eth0 rmnet_data0 wlp2s0 enp2s0 enp3s0 wlan1; do
+        if [ -f /sys/class/net/$if/statistics/rx_bytes ]; then
+            iface="$if"
+            break
+        fi
+    done
+    if [ -z "$iface" ]; then
+        echo "$NO_IFACE"
+        ls /sys/class/net
+        echo "$SPECIFY"
+        tput cnorm; exit 1
+    fi
 fi
+
+if [ ! -f /sys/class/net/$iface/statistics/rx_bytes ]; then
+    echo "Interface $iface not found."
+    echo "Available:"
+    ls /sys/class/net
+    tput cnorm; exit 1
+fi
+
+prev_rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
+prev_tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
 
 while true; do
     sleep 1
@@ -35,25 +56,23 @@ while true; do
     tx_diff=$((tx - prev_tx))
     prev_rx=$rx; prev_tx=$tx
 
-    # Convert to human-readable
-    rx_speed=$(echo "scale=1; $rx_diff/1024" | bc)
-    tx_speed=$(echo "scale=1; $tx_diff/1024" | bc)
+    rx_speed=$(echo "scale=1; $rx_diff/1024" | bc 2>/dev/null || awk "BEGIN {printf \"%.1f\", $rx_diff/1024}")
+    tx_speed=$(echo "scale=1; $tx_diff/1024" | bc 2>/dev/null || awk "BEGIN {printf \"%.1f\", $tx_diff/1024}")
 
     clear
     echo "╔══════════════════════════════════════╗"
     printf "║  %-36s ║\n" "$TITLE"
     echo "╠══════════════════════════════════════╣"
-    printf "║  %s%-30s ║\n" "$IFACE_LABEL" "$iface"
+    printf "║  %s %-31s ║\n" "$IFACE_LABEL" "$iface"
     printf "║  %s: %-8s KB/s                  ║\n" "$DOWN" "$rx_speed"
     printf "║  %s: %-8s KB/s                  ║\n" "$UP" "$tx_speed"
     echo "╠══════════════════════════════════════╣"
-    # Bar for down
     max_bar=20
-    rx_bar_len=$(echo "$rx_speed / 10" | bc)
+    rx_bar_len=$(echo "$rx_speed / 10" | bc 2>/dev/null || awk "BEGIN {printf \"%d\", $rx_speed/10}")
     [ "$rx_bar_len" -gt "$max_bar" ] && rx_bar_len=$max_bar
     rx_bar=$(printf "%${rx_bar_len}s" | tr ' ' '#')
     printf "║  %-7s [%-20s] ║\n" "$DOWN" "$rx_bar"
-    tx_bar_len=$(echo "$tx_speed / 10" | bc)
+    tx_bar_len=$(echo "$tx_speed / 10" | bc 2>/dev/null || awk "BEGIN {printf \"%d\", $tx_speed/10}")
     [ "$tx_bar_len" -gt "$max_bar" ] && tx_bar_len=$max_bar
     tx_bar=$(printf "%${tx_bar_len}s" | tr ' ' '#')
     printf "║  %-7s [%-20s] ║\n" "$UP" "$tx_bar"

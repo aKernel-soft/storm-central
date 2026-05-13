@@ -7,11 +7,13 @@ if locale 2>/dev/null | grep -qi ru; then
     SERVER_START="Eho сервер запущен на порту"
     CLIENT_START="Eho клиент подключился к"
     EXIT_HELP="Введите /quit для выхода."
+    NO_ARGS="Не указаны аргументы. Запустите 'eho' для справки."
 else
     USAGE="Usage: eho server <port>   |   eho client <host> <port>"
     SERVER_START="Eho server listening on port"
     CLIENT_START="Eho client connected to"
     EXIT_HELP="Type /quit to exit."
+    NO_ARGS="No arguments given. Run 'eho' for help."
 fi
 
 case "${1:-}" in
@@ -26,13 +28,10 @@ case "${1:-}" in
         port="${3:-1234}"
         echo "$CLIENT_START $host:$port"
         echo "$EXIT_HELP"
-        # Дуплекс через coproc
         coproc nc "$host" "$port" 2>/dev/null || { echo "Connection failed"; exit 1; }
-        # Читаем из сокета и пишем на экран
         while IFS= read -r line <&"${COPROC[0]}"; do
             echo "$line"
         done &
-        # Читаем с клавиатуры и отправляем в сокет
         while IFS= read -r msg; do
             if [ "$msg" = "/quit" ]; then
                 kill %1 2>/dev/null
@@ -40,6 +39,9 @@ case "${1:-}" in
             fi
             echo "$msg" >&"${COPROC[1]}"
         done
+        ;;
+    help|--help|-h)
+        echo -e "$USAGE"
         ;;
     *)
         echo -e "$USAGE"

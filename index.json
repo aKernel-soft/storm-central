@@ -4,7 +4,7 @@
       "name": "stoler",
       "desc": "STOLER package manager (self-update)",
       "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stoler.sh",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/install.sh",
       "magnet": ""
     },
     {

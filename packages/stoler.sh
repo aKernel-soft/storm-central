@@ -96,7 +96,7 @@ install_pkg() {
         echo "[*] Downloading $url..."
         curl -sL -o "$D/downloads/$fname" "$url" && {
             mkdir -p "$DOWNLOAD_BASE"
-            cp "$D/downloads/$fname" "$target"
+            if [ "$name" = "stoler" ]; then bash "$D/downloads/$fname"; else cp "$D/downloads/$fname" "$target"; fi
             chmod +x "$target" 2>/dev/null || true
             setup_path
             echo "[+] Installed '$name'. Run it with: $name"
