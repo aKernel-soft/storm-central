@@ -1,42 +1,87 @@
 #!/bin/bash
-# Eho – простой чат (сервер/клиент)
-# Работает на Termux и Linux без зависимостей
+# Eho – chat server/client (uses ncat for full duplex)
+set -e
 
+# ---------- i18n ----------
 if locale 2>/dev/null | grep -qi ru; then
     USAGE="Использование: eho server <порт>   |   eho client <хост> <порт>"
     SERVER_START="Eho сервер запущен на порту"
     CLIENT_START="Eho клиент подключился к"
     EXIT_HELP="Введите /quit для выхода."
-    CONNECTED="Клиент подключился"
+    INSTALL_NCAT="Устанавливаю ncat (nmap)..."
+    NCAT_MISSING="ncat не установлен. Попробуйте: pkg install nmap"
+    FALLBACK_MSG="Запущен простой односторонний чат (nc)."
 else
     USAGE="Usage: eho server <port>   |   eho client <host> <port>"
     SERVER_START="Eho server listening on port"
     CLIENT_START="Eho client connected to"
     EXIT_HELP="Type /quit to exit."
-    CONNECTED="Client connected"
+    INSTALL_NCAT="Installing ncat (nmap)..."
+    NCAT_MISSING="ncat is not installed. Try: pkg install nmap"
+    FALLBACK_MSG="Simple one‑way chat started (nc)."
 fi
 
+# ---------- helpers ----------
+ensure_ncat() {
+    if ! command -v ncat &>/dev/null; then
+        echo "$INSTALL_NCAT"
+        if [ -n "$PREFIX" ]; then
+            pkg install -y nmap 2>/dev/null || true
+        elif command -v apt &>/dev/null; then
+            sudo apt update && sudo apt install -y ncat 2>/dev/null || true
+        elif command -v pacman &>/dev/null; then
+            sudo pacman -S --noconfirm nmap 2>/dev/null || true
+        fi
+    fi
+}
+
+# ---------- server ----------
+start_server() {
+    local port="$1"
+    ensure_ncat
+    if command -v ncat &>/dev/null; then
+        echo "$SERVER_START $port"
+        echo "$EXIT_HELP"
+        ncat -l -p "$port" --chat
+    else
+        echo "$NCAT_MISSING"
+        echo "$FALLBACK_MSG"
+        # fallback: простой nc с метками
+        while true; do
+            nc -l -p "$port" -c 'while read line; do echo "[User]: $line"; done' 2>/dev/null || \
+            nc -l "$port" -c 'while read line; do echo "[User]: $line"; done' 2>/dev/null || \
+            nc -l "$port"
+        done
+    fi
+}
+
+# ---------- client ----------
+start_client() {
+    local host="$1"
+    local port="$2"
+    ensure_ncat
+    if command -v ncat &>/dev/null; then
+        echo "$CLIENT_START $host:$port"
+        echo "$EXIT_HELP"
+        ncat "$host" "$port"
+    else
+        echo "$NCAT_MISSING"
+        echo "$FALLBACK_MSG"
+        # fallback: односторонний ввод
+        nc "$host" "$port"
+    fi
+}
+
+# ---------- main ----------
 case "${1:-}" in
     server)
         port="${2:-1234}"
-        echo "$SERVER_START $port"
-        echo "$EXIT_HELP"
-        # Принимаем входящие соединения и выводим всё на экран
-        while true; do
-            nc -l -p "$port" 2>/dev/null || nc -l "$port" 2>/dev/null || {
-                # Если nc не поддерживает -p, пробуем другой синтаксис
-                nc -l "$port"
-            }
-            echo "$CONNECTED"
-        done
+        start_server "$port"
         ;;
     client)
         host="${2:-localhost}"
         port="${3:-1234}"
-        echo "$CLIENT_START $host:$port"
-        echo "$EXIT_HELP"
-        # Отправляем ввод пользователя на сервер, читаем ответ (односторонний чат)
-        nc "$host" "$port"
+        start_client "$host" "$port"
         ;;
     help|--help|-h)
         echo -e "$USAGE"
