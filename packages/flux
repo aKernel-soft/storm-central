@@ -1,5 +1,5 @@
 #!/bin/bash
-# Flux – pure text monitor, no pseudo‑graphics
+# Flux – network monitor (full on PC, lightweight info panel on Termux)
 set -e
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
@@ -13,20 +13,24 @@ fi
 # i18n
 if locale 2>/dev/null | grep -qi ru; then
     TITLE_FULL="Flux – Сетевой монитор"
-    TITLE_MOBILE="Flux-M – Мобильный монитор"
+    TITLE_MOBILE="Flux-M – Сетевой экран"
     EXIT="Нажмите Ctrl+C для выхода"
-    PING_LABEL="Задержка"
-    SPEED_LABEL="Оценка скорости"
     IFACE_LABEL="Интерфейсы"
-    NO_PING="ICMP заблокирован или нет сети. Показываю доступные интерфейсы."
+    IP_LABEL="IP-адреса"
+    GW_LABEL="Шлюз"
+    DNS_LABEL="DNS-серверы"
+    PING_LABEL="Задержка"
+    REFRESH="Обновление каждые 5 сек..."
 else
     TITLE_FULL="Flux – Network Monitor"
-    TITLE_MOBILE="Flux-M – Mobile Monitor"
+    TITLE_MOBILE="Flux-M – Network Panel"
     EXIT="Press Ctrl+C to quit"
-    PING_LABEL="Latency"
-    SPEED_LABEL="Est. speed"
     IFACE_LABEL="Interfaces"
-    NO_PING="ICMP blocked or no network. Showing available interfaces."
+    IP_LABEL="IP addresses"
+    GW_LABEL="Gateway"
+    DNS_LABEL="DNS servers"
+    PING_LABEL="Latency"
+    REFRESH="Refreshing every 5s..."
 fi
 
 # full PC version (unchanged)
@@ -49,29 +53,34 @@ flux_full() {
     done
 }
 
-# mobile version – pure text, no boxes
+# mobile version – lightweight info panel
 flux_mobile() {
     clear
     printf '%s\n' "$TITLE_MOBILE"
     printf '%s\n' "$EXIT"
     echo "----------------------------------------"
 
-    # список интерфейсов
+    # разовый вывод инфы
     echo "$IFACE_LABEL:"
     ifconfig 2>/dev/null | grep -E '^[a-z]' | awk '{print "  "$1}' || echo "  none"
+    echo ""
+    echo "$IP_LABEL:"
+    ifconfig 2>/dev/null | grep 'inet ' | awk '{print "  "$2}' || echo "  none"
+    echo ""
+    echo "$GW_LABEL:"
+    ip route 2>/dev/null | grep default | awk '{print "  "$3}' || echo "  none"
+    echo ""
+    echo "$DNS_LABEL:"
+    grep 'nameserver' /etc/resolv.conf 2>/dev/null | awk '{print "  "$2}' || echo "  none"
+    echo ""
+    echo "$REFRESH"
+    echo "----------------------------------------"
 
-    local host="8.8.8.8"
+    # живой пинг
     while true; do
-        # пробуем пинг (один пакет, таймаут 1 сек)
-        rtt=$(ping -c1 -W1 "$host" 2>/dev/null | grep -oP 'time=\K[0-9.]+' || true)
-        if [ -n "$rtt" ] && [ "$rtt" != "0" ]; then
-            # оценка скорости по задержке: 1000/rtt (очень грубо)
-            speed=$(awk "BEGIN {printf \"%.1f\", 1000 / $rtt}")
-            printf "\r%s: %s ms  |  %s: %s KB/s" "$PING_LABEL" "$rtt" "$SPEED_LABEL" "$speed"
-        else
-            printf "\r%s" "$NO_PING"
-        fi
-        sleep 2
+        rtt=$(ping -c1 -W1 8.8.8.8 2>/dev/null | grep -oP 'time=\K[0-9.]+' || echo "timeout")
+        printf "\r%s: %-6s ms" "$PING_LABEL" "$rtt"
+        sleep 5
     done
 }
 
