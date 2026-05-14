@@ -1,5 +1,5 @@
 #!/bin/bash
-# Flux – network monitor (full on PC, lightweight info panel on Termux)
+# Flux – network monitor (full on PC, Android‑friendly panel on Termux)
 set -e
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
@@ -19,7 +19,7 @@ if locale 2>/dev/null | grep -qi ru; then
     IP_LABEL="IP-адреса"
     GW_LABEL="Шлюз"
     DNS_LABEL="DNS-серверы"
-    PING_LABEL="Задержка"
+    PING_LABEL="Задержка HTTP"
     REFRESH="Обновление каждые 5 сек..."
 else
     TITLE_FULL="Flux – Network Monitor"
@@ -29,7 +29,7 @@ else
     IP_LABEL="IP addresses"
     GW_LABEL="Gateway"
     DNS_LABEL="DNS servers"
-    PING_LABEL="Latency"
+    PING_LABEL="HTTP latency"
     REFRESH="Refreshing every 5s..."
 fi
 
@@ -53,33 +53,44 @@ flux_full() {
     done
 }
 
-# mobile version – lightweight info panel
+# mobile version – Android‑friendly info panel
 flux_mobile() {
     clear
     printf '%s\n' "$TITLE_MOBILE"
     printf '%s\n' "$EXIT"
     echo "----------------------------------------"
 
-    # разовый вывод инфы
+    # Интерфейсы и IP
     echo "$IFACE_LABEL:"
     ifconfig 2>/dev/null | grep -E '^[a-z]' | awk '{print "  "$1}' || echo "  none"
     echo ""
     echo "$IP_LABEL:"
     ifconfig 2>/dev/null | grep 'inet ' | awk '{print "  "$2}' || echo "  none"
     echo ""
+
+    # Шлюз (пробуем Android-специфичный метод)
+    GW=$(ip route 2>/dev/null | awk '/default/{print $3; exit}')
+    [ -z "$GW" ] && GW=$(getprop net.dns1 2>/dev/null)  # fallback
     echo "$GW_LABEL:"
-    ip route 2>/dev/null | grep default | awk '{print "  "$3}' || echo "  none"
+    echo "  ${GW:-none}"
     echo ""
+
+    # DNS (Android property)
+    DNS1=$(getprop net.dns1 2>/dev/null)
+    DNS2=$(getprop net.dns2 2>/dev/null)
     echo "$DNS_LABEL:"
-    grep 'nameserver' /etc/resolv.conf 2>/dev/null | awk '{print "  "$2}' || echo "  none"
+    [ -n "$DNS1" ] && echo "  $DNS1"
+    [ -n "$DNS2" ] && echo "  $DNS2"
+    [ -z "$DNS1" ] && [ -z "$DNS2" ] && echo "  none"
     echo ""
+
     echo "$REFRESH"
     echo "----------------------------------------"
 
-    # живой пинг
+    # Живая задержка через curl (HTTP, не ICMP)
     while true; do
-        rtt=$(ping -c1 -W1 8.8.8.8 2>/dev/null | grep -oP 'time=\K[0-9.]+' || echo "timeout")
-        printf "\r%s: %-6s ms" "$PING_LABEL" "$rtt"
+        latency=$(curl -s -o /dev/null -w '%{time_connect}' http://8.8.8.8 2>/dev/null || echo "timeout")
+        printf "\r%s: %-6s ms" "$PING_LABEL" "$latency"
         sleep 5
     done
 }
