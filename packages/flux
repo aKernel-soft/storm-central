@@ -1,5 +1,5 @@
 #!/bin/bash
-# Flux – network monitor (full on PC, mobile mode on Termux with live refresh)
+# Flux – network monitor (full on PC, ping-based speed estimation on Termux)
 set -e
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
@@ -10,36 +10,30 @@ else
     IS_TERMUX=false
 fi
 
-# ========== i18n ==========
+# ---------- i18n ----------
 if locale 2>/dev/null | grep -qi ru; then
     TITLE_FULL="Flux – Сетевой монитор"
     TITLE_MOBILE="Flux-M – Мобильный монитор"
-    IFACE_LABEL="Интерфейс:"
+    EXIT_MSG="Нажмите Ctrl+C для выхода"
     DOWN="Вниз"
     UP="Вверх"
-    EXIT_MSG="Нажмите Ctrl+C для выхода"
-    NO_IFACE="Не указан интерфейс. Доступные:"
-    SPECIFY="Укажите интерфейс: flux <интерфейс>"
-    MOBILE_PING="Пинг"
-    MOBILE_LOSS="Потери"
-    MOBILE_RTT="Средняя задержка"
-    MOBILE_SCANNING="Обновление каждые 2 сек..."
+    LATENCY="Задержка"
+    EST_SPEED="Оценка скорости"
+    KB_S="КБ/с"
+    MB_S="МБ/с"
 else
     TITLE_FULL="Flux – Network Monitor"
     TITLE_MOBILE="Flux-M – Mobile Monitor"
-    IFACE_LABEL="Interface:"
+    EXIT_MSG="Press Ctrl+C to quit"
     DOWN="Down"
     UP="Up"
-    EXIT_MSG="Press Ctrl+C to quit"
-    NO_IFACE="No interface specified. Available:"
-    SPECIFY="Specify interface: flux <interface>"
-    MOBILE_PING="Ping"
-    MOBILE_LOSS="Loss"
-    MOBILE_RTT="Avg RTT"
-    MOBILE_SCANNING="Refreshing every 2s..."
+    LATENCY="Latency"
+    EST_SPEED="Est. Speed"
+    KB_S="KB/s"
+    MB_S="MB/s"
 fi
 
-# ========== FULL PC VERSION (unchanged) ==========
+# ========== full PC version ==========
 flux_full() {
     iface="${1:-}"
     if [ -z "$iface" ]; then
@@ -47,9 +41,9 @@ flux_full() {
             [ -f "/sys/class/net/$if/statistics/rx_bytes" ] && iface="$if" && break
         done
         if [ -z "$iface" ]; then
-            echo "$NO_IFACE"
+            echo "No interface found. Available:"
             ls /sys/class/net 2>/dev/null || echo "No /sys/class/net"
-            echo "$SPECIFY"
+            echo "Specify interface: flux <interface>"
             exit 1
         fi
     fi
@@ -73,9 +67,9 @@ flux_full() {
         echo "╔══════════════════════════════════════╗"
         printf "║  %-36s ║\n" "$TITLE_FULL"
         echo "╠══════════════════════════════════════╣"
-        printf "║  %s %-31s ║\n" "$IFACE_LABEL" "$iface"
-        printf "║  %s: %-8s KB/s                  ║\n" "$DOWN" "$rx_speed"
-        printf "║  %s: %-8s KB/s                  ║\n" "$UP" "$tx_speed"
+        printf "║  Interface: %-27s ║\n" "$iface"
+        printf "║  %s: %-8s %-4s                  ║\n" "$DOWN" "$rx_speed" "$KB_S"
+        printf "║  %s: %-8s %-4s                  ║\n" "$UP" "$tx_speed" "$KB_S"
         echo "╠══════════════════════════════════════╣"
         max_bar=20
         rx_bar_len=$(awk "BEGIN {printf \"%d\", $rx_speed/10}")
@@ -91,36 +85,63 @@ flux_full() {
     done
 }
 
-# ========== MOBILE VERSION (live ping monitor) ==========
+# ========== mobile version (ping-based speed estimation) ==========
 flux_mobile() {
     clear
+    local host="8.8.8.8"   # можно параметризовать позже
+    # интерфейсы – просто список, без деталей трафика
+    local ifaces
+    ifaces=$(ifconfig 2>/dev/null | grep -E '^[a-z]' | awk '{print $1}' | tr '\n' ' ' || echo "none")
+
     while true; do
-        # собираем данные
-        ifaces=$(ifconfig 2>/dev/null | grep -E '^[a-z]' | awk '{print $1}' | tr '\n' ' ' || echo "none")
-        # пинг до 8.8.8.8: одна строка с потерями и средней задержкой
-        ping_out=$(ping -c2 -W1 8.8.8.8 2>&1 | tail -1)
-        loss=$(echo "$ping_out" | grep -oP '\d+(?=% packet loss)' || echo "100")
-        rtt=$(echo "$ping_out" | grep -oP '\d+\.\d+/\d+\.\d+/\d+\.\d+' | cut -d/ -f2 || echo "?")
-        # рисуем
+        # замеряем время пинга (один пакет, чтобы быстро)
+        local rtt
+        rtt=$(ping -c1 -W2 "$host" 2>/dev/null | grep -oP 'time=\K[0-9.]+' || echo "0")
+        local rtt_ms="${rtt:-0}"
+        # оценка скорости: 1/rtt * коэффициент (очень грубо)
+        # Используем формулу: speed (KB/s) ≈ 1000 / rtt_ms (если rtt > 0), иначе 0
+        local speed_kb=0
+        if command -v bc &>/dev/null && [[ "$rtt_ms" =~ ^[0-9.]+$ ]] && (( $(echo "$rtt_ms > 0" | bc) )); then
+            speed_kb=$(echo "scale=1; 1000 / $rtt_ms" | bc)
+        else
+            speed_kb="0"
+        fi
+
+        # пересчёт в МБ/с при большом значении
+        local disp_speed disp_unit
+        if (( $(echo "$speed_kb >= 1024" | bc 2>/dev/null || echo 0) )); then
+            disp_speed=$(echo "scale=1; $speed_kb / 1024" | bc)
+            disp_unit="$MB_S"
+        else
+            disp_speed="$speed_kb"
+            disp_unit="$KB_S"
+        fi
+
+        # бар для скорости
+        local max_bar=20
+        local bar_len
+        bar_len=$(echo "scale=0; $speed_kb / 50" | bc 2>/dev/null || echo 0)
+        [ "$bar_len" -gt "$max_bar" ] && bar_len=$max_bar
+        local bar
+        bar=$(printf "%${bar_len}s" | tr ' ' '#')
+
         clear
         echo "╔══════════════════════════════════════╗"
         printf "║  %-36s ║\n" "$TITLE_MOBILE"
         echo "╠══════════════════════════════════════╣"
-        printf "║  %s %-31s ║\n" "$MOBILE_PING:" "$rtt ms"
-        printf "║  %s %-31s ║\n" "$MOBILE_LOSS:" "$loss%"
-        printf "║  %s: %-29s ║\n" "$MOBILE_RTT" "$rtt ms"
+        printf "║  %s: %-6s ms                     ║\n" "$LATENCY" "$rtt_ms"
+        printf "║  %s: %-6s %-4s                   ║\n" "$EST_SPEED" "$disp_speed" "$disp_unit"
         echo "╠══════════════════════════════════════╣"
-        printf "║  %-36s ║\n" "Интерфейсы:"
-        for if in $ifaces; do
-            printf "║    - %-32s ║\n" "$if"
-        done
+        printf "║  %-7s [%-20s] ║\n" "$EST_SPEED" "$bar"
+        echo "╠══════════════════════════════════════╣"
+        printf "║  Interfaces: %-23s ║\n" "${ifaces:0:23}"
         echo "╚══════════════════════════════════════╝"
-        echo "$MOBILE_SCANNING"
+        echo "$EXIT_MSG"
         sleep 2
     done
 }
 
-# ========== MAIN ==========
+# ========== main ==========
 if $IS_TERMUX; then
     flux_mobile
 else
