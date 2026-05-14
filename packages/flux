@@ -1,5 +1,5 @@
 #!/bin/bash
-# Flux – network monitor (full on PC, info panel on Termux)
+# Flux – network monitor (full on PC, adaptive mobile on Termux)
 set -e
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
@@ -13,18 +13,24 @@ fi
 # i18n
 if locale 2>/dev/null | grep -qi ru; then
     TITLE_FULL="Flux – Сетевой монитор"
-    TITLE_MOBILE="Flux-M – Информация о сети"
+    TITLE_MOBILE="Flux-M – Сетевой экран"
     EXIT="Нажмите Ctrl+C для выхода"
     IFACE_LABEL="Интерфейсы"
     IP_LABEL="IP-адреса"
-    NO_ROOT_MSG="Для детального мониторинга требуется root-доступ."
+    GW_LABEL="Шлюз"
+    DNS_LABEL="DNS"
+    SPEED_LABEL="Трафик"
+    NO_ROOT_MSG="Подробный мониторинг требует root."
 else
     TITLE_FULL="Flux – Network Monitor"
-    TITLE_MOBILE="Flux-M – Network Info"
+    TITLE_MOBILE="Flux-M – Network Panel"
     EXIT="Press Ctrl+C to quit"
     IFACE_LABEL="Interfaces"
     IP_LABEL="IP addresses"
-    NO_ROOT_MSG="Detailed monitoring requires root access."
+    GW_LABEL="Gateway"
+    DNS_LABEL="DNS"
+    SPEED_LABEL="Traffic"
+    NO_ROOT_MSG="Detailed monitoring requires root."
 fi
 
 # full PC version (unchanged)
@@ -47,25 +53,59 @@ flux_full() {
     done
 }
 
-# mobile version – только то, что доступно без root
+# mobile version with root detection
 flux_mobile() {
+    local has_root=false
+    if command -v su &>/dev/null && su -c 'id' 2>/dev/null | grep -q 'uid=0'; then
+        has_root=true
+    fi
+
     clear
     printf '%s\n' "$TITLE_MOBILE"
     printf '%s\n' "$EXIT"
     echo "----------------------------------------"
 
+    # Вывод интерфейсов и IP (доступно всегда)
     echo "$IFACE_LABEL:"
     ifconfig 2>/dev/null | grep -E '^[a-z]' | awk '{print "  "$1}' || echo "  none"
     echo ""
-
     echo "$IP_LABEL:"
     ifconfig 2>/dev/null | grep 'inet ' | awk '{print "  "$2}' || echo "  none"
     echo ""
 
-    echo "$NO_ROOT_MSG"
-    echo "----------------------------------------"
-    # держим экран открытым до Ctrl+C
-    while true; do sleep 10; done
+    if $has_root; then
+        # Шлюз
+        GW=$(ip route 2>/dev/null | awk '/default/{print $3; exit}')
+        [ -z "$GW" ] && GW=$(getprop net.dns1 2>/dev/null)  # fallback, иногда шлюз там
+        echo "$GW_LABEL: ${GW:-none}"
+        # DNS
+        DNS1=$(getprop net.dns1 2>/dev/null)
+        DNS2=$(getprop net.dns2 2>/dev/null)
+        echo "$DNS_LABEL: ${DNS1:-none} ${DNS2:-none}"
+        echo ""
+        # Живой трафик для первого найденного интерфейса
+        iface=$(ls /sys/class/net 2>/dev/null | grep -v lo | head -1)
+        if [ -n "$iface" ] && [ -f "/sys/class/net/$iface/statistics/rx_bytes" ]; then
+            prev_rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
+            prev_tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
+            echo "$SPEED_LABEL ($iface):"
+            while true; do
+                sleep 1
+                rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
+                tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
+                rx_diff=$((rx - prev_rx))
+                tx_diff=$((tx - prev_tx))
+                prev_rx=$rx; prev_tx=$tx
+                printf "\r↓ %s KB/s  ↑ %s KB/s" "$(awk "BEGIN {printf \"%.1f\", $rx_diff/1024}")" "$(awk "BEGIN {printf \"%.1f\", $tx_diff/1024}")"
+            done
+        else
+            echo "$SPEED_LABEL: /sys/class/net недоступен"
+            while true; do sleep 10; done
+        fi
+    else
+        echo "$NO_ROOT_MSG"
+        while true; do sleep 10; done
+    fi
 }
 
 if $IS_TERMUX; then
