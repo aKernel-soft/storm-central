@@ -1,11 +1,9 @@
 #!/bin/bash
-# Flux – network monitor (full on PC, mobile mode on Termux)
+# Flux – network monitor (full on PC, mobile mode on Termux with live refresh)
 set -e
-
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
 
-# Определяем среду
 if [ -n "$PREFIX" ] && [ -d "$PREFIX" ]; then
     IS_TERMUX=true
 else
@@ -15,33 +13,36 @@ fi
 # ========== i18n ==========
 if locale 2>/dev/null | grep -qi ru; then
     TITLE_FULL="Flux – Сетевой монитор"
-    TITLE_MOBILE="Flux-M – Мобильный сетевой монитор"
+    TITLE_MOBILE="Flux-M – Мобильный монитор"
     IFACE_LABEL="Интерфейс:"
     DOWN="Вниз"
     UP="Вверх"
     EXIT_MSG="Нажмите Ctrl+C для выхода"
     NO_IFACE="Не указан интерфейс. Доступные:"
     SPECIFY="Укажите интерфейс: flux <интерфейс>"
-    MOBILE_IFACES="Доступные интерфейсы:"
-    MOBILE_PING="Пинг до 8.8.8.8:"
+    MOBILE_PING="Пинг"
+    MOBILE_LOSS="Потери"
+    MOBILE_RTT="Средняя задержка"
+    MOBILE_SCANNING="Обновление каждые 2 сек..."
 else
     TITLE_FULL="Flux – Network Monitor"
-    TITLE_MOBILE="Flux-M – Mobile Network Monitor"
+    TITLE_MOBILE="Flux-M – Mobile Monitor"
     IFACE_LABEL="Interface:"
     DOWN="Down"
     UP="Up"
     EXIT_MSG="Press Ctrl+C to quit"
     NO_IFACE="No interface specified. Available:"
     SPECIFY="Specify interface: flux <interface>"
-    MOBILE_IFACES="Available interfaces:"
-    MOBILE_PING="Ping to 8.8.8.8:"
+    MOBILE_PING="Ping"
+    MOBILE_LOSS="Loss"
+    MOBILE_RTT="Avg RTT"
+    MOBILE_SCANNING="Refreshing every 2s..."
 fi
 
-# ========== ПОЛНОЦЕННЫЙ FLUX ДЛЯ ПК ==========
+# ========== FULL PC VERSION (unchanged) ==========
 flux_full() {
     iface="${1:-}"
     if [ -z "$iface" ]; then
-        # автоопределение через /sys/class/net
         for if in wlan0 eth0 wlp2s0 enp2s0 enp3s0; do
             [ -f "/sys/class/net/$if/statistics/rx_bytes" ] && iface="$if" && break
         done
@@ -52,16 +53,13 @@ flux_full() {
             exit 1
         fi
     fi
-
     if [ ! -f "/sys/class/net/$iface/statistics/rx_bytes" ]; then
         echo "Interface $iface not found."
         ls /sys/class/net
         exit 1
     fi
-
     prev_rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
     prev_tx=$(cat /sys/class/net/$iface/statistics/tx_bytes)
-
     while true; do
         sleep 1
         rx=$(cat /sys/class/net/$iface/statistics/rx_bytes)
@@ -69,10 +67,8 @@ flux_full() {
         rx_diff=$((rx - prev_rx))
         tx_diff=$((tx - prev_tx))
         prev_rx=$rx; prev_tx=$tx
-
         rx_speed=$(awk "BEGIN {printf \"%.1f\", $rx_diff/1024}")
         tx_speed=$(awk "BEGIN {printf \"%.1f\", $tx_diff/1024}")
-
         clear
         echo "╔══════════════════════════════════════╗"
         printf "║  %-36s ║\n" "$TITLE_FULL"
@@ -95,25 +91,33 @@ flux_full() {
     done
 }
 
-# ========== FLUX-M ДЛЯ TERMUX ==========
+# ========== MOBILE VERSION (live ping monitor) ==========
 flux_mobile() {
     clear
-    echo "╔══════════════════════════════════════╗"
-    printf "║  %-36s ║\n" "$TITLE_MOBILE"
-    echo "╠══════════════════════════════════════╣"
-    echo "║  $MOBILE_IFACES"
-    # Показываем интерфейсы через ifconfig или ip
-    if command -v ifconfig &>/dev/null; then
-        ifconfig | awk '/^[a-z]/{print "║    " $1}' 2>/dev/null || echo "║    (none)"
-    elif command -v ip &>/dev/null; then
-        ip -o link show | awk -F': ' '{print "║    "$2}' || echo "║    (none)"
-    fi
-    echo "╠══════════════════════════════════════╣"
-    echo "║  $MOBILE_PING"
-    ping -c3 8.8.8.8 2>&1 | tail -1 | awk '{print "║    "$0}'
-    echo "╚══════════════════════════════════════╝"
-    echo "$EXIT_MSG"
-    sleep 2
+    while true; do
+        # собираем данные
+        ifaces=$(ifconfig 2>/dev/null | grep -E '^[a-z]' | awk '{print $1}' | tr '\n' ' ' || echo "none")
+        # пинг до 8.8.8.8: одна строка с потерями и средней задержкой
+        ping_out=$(ping -c2 -W1 8.8.8.8 2>&1 | tail -1)
+        loss=$(echo "$ping_out" | grep -oP '\d+(?=% packet loss)' || echo "100")
+        rtt=$(echo "$ping_out" | grep -oP '\d+\.\d+/\d+\.\d+/\d+\.\d+' | cut -d/ -f2 || echo "?")
+        # рисуем
+        clear
+        echo "╔══════════════════════════════════════╗"
+        printf "║  %-36s ║\n" "$TITLE_MOBILE"
+        echo "╠══════════════════════════════════════╣"
+        printf "║  %s %-31s ║\n" "$MOBILE_PING:" "$rtt ms"
+        printf "║  %s %-31s ║\n" "$MOBILE_LOSS:" "$loss%"
+        printf "║  %s: %-29s ║\n" "$MOBILE_RTT" "$rtt ms"
+        echo "╠══════════════════════════════════════╣"
+        printf "║  %-36s ║\n" "Интерфейсы:"
+        for if in $ifaces; do
+            printf "║    - %-32s ║\n" "$if"
+        done
+        echo "╚══════════════════════════════════════╝"
+        echo "$MOBILE_SCANNING"
+        sleep 2
+    done
 }
 
 # ========== MAIN ==========
