@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STOLER – Decentralized Package Manager</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --surface: #0a0a0a;
+            --border: #222222;
+            --text: #cccccc;
+            --text-muted: #888888;
+            --accent: #ffffff;
+            --code-bg: #0a0a0a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 720px;
+        }
+
+        .logo-mark {
+            text-align: center;
+            margin-bottom: 2rem;
+            font-weight: 800;
+            font-size: 2.5rem;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: var(--text-muted);
+            margin-bottom: 2.5rem;
+            font-size: 1.1rem;
+            letter-spacing: 0.2px;
+        }
+
+        .install-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 0;
+            padding: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .install-block .prompt {
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .install-block code {
+            display: block;
+            background: #000000;
+            padding: 1rem 1.2rem;
+            border: 1px solid #333333;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.85rem;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.2rem;
+            margin: 2.5rem 0;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0;
+            padding: 1.5rem;
+            transition: border-color 0.2s, transform 0.2s;
+        }
+
+        .card:hover {
+            border-color: #ffffff;
+            transform: translateY(-2px);
+        }
+
+        .card h3 {
+            color: #ffffff;
+            margin-bottom: 0.5rem;
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            line-height: 1.6;
+            font-size: 0.9rem;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: #666666;
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: #ffffff;
+            text-decoration: none;
+            border-bottom: 1px solid #333333;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 1.5rem 0.8rem;
+            }
+            .logo-mark {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-mark">STOLER</div>
+        <p class="subtitle">Decentralized package manager. No servers. No censorship.</p>
+
+        <div class="install-block">
+            <div class="prompt">install in one command</div>
+            <code>curl -sL https://raw.githubusercontent.com/aKernel-soft/storm-central/main/install.sh | bash</code>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Decentralized</h3>
+                <p>Packages travel via BitTorrent magnet links. Alive while one peer seeds.</p>
+            </div>
+            <div class="card">
+                <h3>Central Index</h3>
+                <p>A single JSON repository on GitHub connects you to all packages instantly.</p>
+            </div>
+            <div class="card">
+                <h3>15+ Utilities</h3>
+                <p>Bolt, STop, Flux, Eho, PassKeeper, Gale, Recon — ready to install.</p>
+            </div>
+            <div class="card">
+                <h3>Cross-Platform</h3>
+                <p>Termux, Linux, Docker — anywhere bash runs, STOLER runs.</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            aKernel &copy; 2026 &mdash; within the STORM project &mdash; 
+            <a href="https://github.com/aKernel-soft/storm-central">GitHub</a>
+        </div>
+    </div>
+</body>
+</html>
