@@ -1,13 +1,15 @@
 #!/bin/bash
-# Eho – encrypted chat with ncat + SSL, automatic user prefixes via --chat
+# Eho – encrypted chat with ncat + SSL, user prefixes via --chat
 set -e
 
+# ---------- i18n ----------
 if locale 2>/dev/null | grep -qi ru; then
     USAGE="Использование: eho server <порт>   |   eho client <хост> <порт>"
     SERVER_START="Eho сервер запущен (SSL) на порту"
     CLIENT_START="Eho клиент подключился к"
     EXIT_HELP="Введите /quit для выхода."
     INSTALL_NCAT="Устанавливаю ncat (nmap)..."
+    INSTALL_OPENSSL="Устанавливаю openssl..."
     NCAT_MISSING="ncat не установлен. Попробуйте: pkg install nmap"
     GEN_CERT="Генерирую самоподписанный сертификат..."
     CERT_READY="Сертификат готов."
@@ -17,10 +19,25 @@ else
     CLIENT_START="Eho client connected to"
     EXIT_HELP="Type /quit to exit."
     INSTALL_NCAT="Installing ncat (nmap)..."
+    INSTALL_OPENSSL="Installing openssl..."
     NCAT_MISSING="ncat is not installed. Try: pkg install nmap"
     GEN_CERT="Generating self‑signed certificate..."
     CERT_READY="Certificate ready."
 fi
+
+# ---------- helpers ----------
+ensure_openssl() {
+    if ! command -v openssl &>/dev/null; then
+        echo "$INSTALL_OPENSSL"
+        if [ -n "$PREFIX" ]; then
+            pkg install -y openssl-tool 2>/dev/null || true
+        elif command -v apt &>/dev/null; then
+            sudo apt update && sudo apt install -y openssl 2>/dev/null || true
+        elif command -v pacman &>/dev/null; then
+            sudo pacman -S --noconfirm openssl 2>/dev/null || true
+        fi
+    fi
+}
 
 ensure_ncat() {
     if ! command -v ncat &>/dev/null; then
@@ -43,12 +60,12 @@ ensure_cert() {
     local cert_dir="/tmp/eho_certs"
     local cert_file="$cert_dir/eho.pem"
     if [ ! -f "$cert_file" ]; then
+        ensure_openssl
         echo "$GEN_CERT"
         mkdir -p "$cert_dir"
         openssl req -x509 -newkey rsa:2048 -keyout "$cert_file" -out "$cert_file" -days 365 -nodes -subj "/CN=EhoChat" 2>/dev/null
         echo "$CERT_READY"
     fi
-    # возвращаем путь
     echo "$cert_file"
 }
 
@@ -72,7 +89,6 @@ start_client() {
     echo "$CLIENT_START $host:$port"
     echo "$EXIT_HELP"
 
-    # просто подключаемся, ncat сам пробрасывает stdin/out через ssl
     ncat --ssl "$host" "$port"
 }
 
