@@ -57,7 +57,7 @@ ensure_ncat() {
 }
 
 ensure_cert() {
-    local cert_dir="/tmp/eho_certs"
+    local cert_dir="$HOME/.eho_certs"
     local cert_file="$cert_dir/eho.pem"
     if [ ! -f "$cert_file" ]; then
         ensure_openssl
