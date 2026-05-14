@@ -1,19 +1,19 @@
 #!/bin/bash
 # Eho – простой чат (сервер/клиент)
-set -e
+# Работает на Termux и Linux без зависимостей
 
 if locale 2>/dev/null | grep -qi ru; then
     USAGE="Использование: eho server <порт>   |   eho client <хост> <порт>"
     SERVER_START="Eho сервер запущен на порту"
     CLIENT_START="Eho клиент подключился к"
     EXIT_HELP="Введите /quit для выхода."
-    NO_ARGS="Не указаны аргументы. Запустите 'eho' для справки."
+    CONNECTED="Клиент подключился"
 else
     USAGE="Usage: eho server <port>   |   eho client <host> <port>"
     SERVER_START="Eho server listening on port"
     CLIENT_START="Eho client connected to"
     EXIT_HELP="Type /quit to exit."
-    NO_ARGS="No arguments given. Run 'eho' for help."
+    CONNECTED="Client connected"
 fi
 
 case "${1:-}" in
@@ -21,24 +21,22 @@ case "${1:-}" in
         port="${2:-1234}"
         echo "$SERVER_START $port"
         echo "$EXIT_HELP"
-        nc -l -p "$port" -c 'cat' 2>/dev/null || nc -l -p "$port" -e 'cat' 2>/dev/null
+        # Принимаем входящие соединения и выводим всё на экран
+        while true; do
+            nc -l -p "$port" 2>/dev/null || nc -l "$port" 2>/dev/null || {
+                # Если nc не поддерживает -p, пробуем другой синтаксис
+                nc -l "$port"
+            }
+            echo "$CONNECTED"
+        done
         ;;
     client)
         host="${2:-localhost}"
         port="${3:-1234}"
         echo "$CLIENT_START $host:$port"
         echo "$EXIT_HELP"
-        coproc nc "$host" "$port" 2>/dev/null || { echo "Connection failed"; exit 1; }
-        while IFS= read -r line <&"${COPROC[0]}"; do
-            echo "$line"
-        done &
-        while IFS= read -r msg; do
-            if [ "$msg" = "/quit" ]; then
-                kill %1 2>/dev/null
-                break
-            fi
-            echo "$msg" >&"${COPROC[1]}"
-        done
+        # Отправляем ввод пользователя на сервер, читаем ответ (односторонний чат)
+        nc "$host" "$port"
         ;;
     help|--help|-h)
         echo -e "$USAGE"
