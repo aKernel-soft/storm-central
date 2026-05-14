@@ -1,24 +1,28 @@
 #!/bin/bash
-# Eho – chat server/client (uses ncat for full duplex)
+# Eho – encrypted chat (server/client) with ncat + SSL
 set -e
 
 # ---------- i18n ----------
 if locale 2>/dev/null | grep -qi ru; then
     USAGE="Использование: eho server <порт>   |   eho client <хост> <порт>"
-    SERVER_START="Eho сервер запущен на порту"
+    SERVER_START="Eho сервер запущен (SSL) на порту"
     CLIENT_START="Eho клиент подключился к"
     EXIT_HELP="Введите /quit для выхода."
     INSTALL_NCAT="Устанавливаю ncat (nmap)..."
     NCAT_MISSING="ncat не установлен. Попробуйте: pkg install nmap"
-    FALLBACK_MSG="Запущен простой односторонний чат (nc)."
+    GEN_CERT="Генерирую самоподписанный сертификат..."
+    CERT_READY="Сертификат готов."
+    YOU="Вы"
 else
     USAGE="Usage: eho server <port>   |   eho client <host> <port>"
-    SERVER_START="Eho server listening on port"
+    SERVER_START="Eho server listening (SSL) on port"
     CLIENT_START="Eho client connected to"
     EXIT_HELP="Type /quit to exit."
     INSTALL_NCAT="Installing ncat (nmap)..."
     NCAT_MISSING="ncat is not installed. Try: pkg install nmap"
-    FALLBACK_MSG="Simple one‑way chat started (nc)."
+    GEN_CERT="Generating self‑signed certificate..."
+    CERT_READY="Certificate ready."
+    YOU="You"
 fi
 
 # ---------- helpers ----------
@@ -33,26 +37,37 @@ ensure_ncat() {
             sudo pacman -S --noconfirm nmap 2>/dev/null || true
         fi
     fi
+    if ! command -v ncat &>/dev/null; then
+        echo "$NCAT_MISSING"
+        exit 1
+    fi
+}
+
+ensure_cert() {
+    local cert_dir="$HOME/.eho_certs"
+    local cert_file="$cert_dir/eho.pem"
+    if [ ! -f "$cert_file" ]; then
+        echo "$GEN_CERT"
+        mkdir -p "$cert_dir"
+        # генерируем самоподписанный сертификат на год
+        openssl req -x509 -newkey rsa:2048 -keyout "$cert_file" -out "$cert_file" -days 365 -nodes -subj "/CN=EhoChat" 2>/dev/null
+        echo "$CERT_READY"
+    fi
+    echo "$cert_file"
 }
 
 # ---------- server ----------
 start_server() {
     local port="$1"
     ensure_ncat
-    if command -v ncat &>/dev/null; then
-        echo "$SERVER_START $port"
-        echo "$EXIT_HELP"
-        ncat -l -p "$port" --chat
-    else
-        echo "$NCAT_MISSING"
-        echo "$FALLBACK_MSG"
-        # fallback: простой nc с метками
-        while true; do
-            nc -l -p "$port" -c 'while read line; do echo "[User]: $line"; done' 2>/dev/null || \
-            nc -l "$port" -c 'while read line; do echo "[User]: $line"; done' 2>/dev/null || \
-            nc -l "$port"
-        done
-    fi
+    local cert_file
+    cert_file=$(ensure_cert)
+
+    echo "$SERVER_START $port"
+    echo "$EXIT_HELP"
+
+    # --chat даёт префиксы <userN>, --ssl шифрует
+    ncat -l -p "$port" --ssl --ssl-cert "$cert_file" --ssl-key "$cert_file" --chat
 }
 
 # ---------- client ----------
@@ -60,16 +75,36 @@ start_client() {
     local host="$1"
     local port="$2"
     ensure_ncat
-    if command -v ncat &>/dev/null; then
-        echo "$CLIENT_START $host:$port"
-        echo "$EXIT_HELP"
-        ncat "$host" "$port"
-    else
-        echo "$NCAT_MISSING"
-        echo "$FALLBACK_MSG"
-        # fallback: односторонний ввод
-        nc "$host" "$port"
-    fi
+
+    echo "$CLIENT_START $host:$port"
+    echo "$EXIT_HELP"
+
+    # клиент: принимаем STDIN, отправляем в сокет, читаем ответ в фоне
+    # Добавляем префикс [Вы] к своим сообщениям
+    local tmpfifo="/tmp/eho_$$"
+    mkfifo "$tmpfifo"
+
+    # Фоновый процесс: читает из сокета и выводит на экран
+    ncat --ssl -v "$host" "$port" > "$tmpfifo" 2>/dev/null &
+    local ncat_pid=$!
+
+    # Читаем ответы с префиксом [Собеседник]
+    while read -r line < "$tmpfifo"; do
+        echo "[Собеседник]: $line"
+    done &
+    local reader_pid=$!
+
+    # Отправляем сообщения с префиксом [Вы]
+    while IFS= read -r msg; do
+        if [ "$msg" = "/quit" ]; then
+            break
+        fi
+        echo "[$YOU]: $msg" | ncat --ssl "$host" "$port" 2>/dev/null
+    done
+
+    kill "$reader_pid" 2>/dev/null
+    kill "$ncat_pid" 2>/dev/null
+    rm -f "$tmpfifo"
 }
 
 # ---------- main ----------
