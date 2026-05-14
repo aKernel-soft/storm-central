@@ -1,5 +1,5 @@
 #!/bin/bash
-# Flux – network monitor (full on PC, Android‑friendly panel on Termux)
+# Flux – network monitor (full on PC, info panel on Termux)
 set -e
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
@@ -13,24 +13,18 @@ fi
 # i18n
 if locale 2>/dev/null | grep -qi ru; then
     TITLE_FULL="Flux – Сетевой монитор"
-    TITLE_MOBILE="Flux-M – Сетевой экран"
+    TITLE_MOBILE="Flux-M – Информация о сети"
     EXIT="Нажмите Ctrl+C для выхода"
     IFACE_LABEL="Интерфейсы"
     IP_LABEL="IP-адреса"
-    GW_LABEL="Шлюз"
-    DNS_LABEL="DNS-серверы"
-    PING_LABEL="Задержка HTTP"
-    REFRESH="Обновление каждые 5 сек..."
+    NO_ROOT_MSG="Для детального мониторинга требуется root-доступ."
 else
     TITLE_FULL="Flux – Network Monitor"
-    TITLE_MOBILE="Flux-M – Network Panel"
+    TITLE_MOBILE="Flux-M – Network Info"
     EXIT="Press Ctrl+C to quit"
     IFACE_LABEL="Interfaces"
     IP_LABEL="IP addresses"
-    GW_LABEL="Gateway"
-    DNS_LABEL="DNS servers"
-    PING_LABEL="HTTP latency"
-    REFRESH="Refreshing every 5s..."
+    NO_ROOT_MSG="Detailed monitoring requires root access."
 fi
 
 # full PC version (unchanged)
@@ -53,46 +47,25 @@ flux_full() {
     done
 }
 
-# mobile version – Android‑friendly info panel
+# mobile version – только то, что доступно без root
 flux_mobile() {
     clear
     printf '%s\n' "$TITLE_MOBILE"
     printf '%s\n' "$EXIT"
     echo "----------------------------------------"
 
-    # Интерфейсы и IP
     echo "$IFACE_LABEL:"
     ifconfig 2>/dev/null | grep -E '^[a-z]' | awk '{print "  "$1}' || echo "  none"
     echo ""
+
     echo "$IP_LABEL:"
     ifconfig 2>/dev/null | grep 'inet ' | awk '{print "  "$2}' || echo "  none"
     echo ""
 
-    # Шлюз (пробуем Android-специфичный метод)
-    GW=$(ip route 2>/dev/null | awk '/default/{print $3; exit}')
-    [ -z "$GW" ] && GW=$(getprop net.dns1 2>/dev/null)  # fallback
-    echo "$GW_LABEL:"
-    echo "  ${GW:-none}"
-    echo ""
-
-    # DNS (Android property)
-    DNS1=$(getprop net.dns1 2>/dev/null)
-    DNS2=$(getprop net.dns2 2>/dev/null)
-    echo "$DNS_LABEL:"
-    [ -n "$DNS1" ] && echo "  $DNS1"
-    [ -n "$DNS2" ] && echo "  $DNS2"
-    [ -z "$DNS1" ] && [ -z "$DNS2" ] && echo "  none"
-    echo ""
-
-    echo "$REFRESH"
+    echo "$NO_ROOT_MSG"
     echo "----------------------------------------"
-
-    # Живая задержка через curl (HTTP, не ICMP)
-    while true; do
-        latency=$(curl -s -o /dev/null -w '%{time_connect}' http://8.8.8.8 2>/dev/null || echo "timeout")
-        printf "\r%s: %-6s ms" "$PING_LABEL" "$latency"
-        sleep 5
-    done
+    # держим экран открытым до Ctrl+C
+    while true; do sleep 10; done
 }
 
 if $IS_TERMUX; then
