@@ -111,6 +111,13 @@
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stormraid",
       "magnet": ""
+    },
+    {
+      "name": "stormraid",
+      "desc": "STORM Raid – Wolfenstein-style FPS in the terminal",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stormraid",
+      "magnet": ""
     }
   ]
 }
