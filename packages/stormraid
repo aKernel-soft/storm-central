@@ -1,0 +1,169 @@
+#!/bin/bash
+# STORM Raid v1.0 – Wolfenstein-like FPS for STOLER
+# aKernel within the STORM project
+
+trap 'tput cnorm; clear; stty echo; exit' INT TERM
+tput civis
+stty -echo
+
+# ---------- Карта (16x16, 1=стена) ----------
+MAP=(
+  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+  1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+  1 0 1 1 0 1 1 0 1 0 1 1 0 1 0 1
+  1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+  1 0 1 0 1 0 0 1 0 0 1 0 1 0 1 1
+  1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+  1 0 1 0 0 0 1 0 0 1 0 0 0 1 0 1
+  1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+  1 0 1 0 1 0 0 0 0 0 0 1 0 0 0 1
+  1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+  1 0 0 0 0 0 1 1 1 1 0 0 0 0 0 1
+  1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+  1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+  1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+  1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1
+  1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+)
+MAP_SIZE=16
+
+# ---------- Игрок ----------
+player_x=2.0
+player_y=2.0
+player_angle=0.0
+health=100
+
+# ---------- Враги ----------
+declare -A enemies
+enemy_count=5
+for ((i=0; i<enemy_count; i++)); do
+  enemies[$i,0]=$((RANDOM % 10 + 3))
+  enemies[$i,1]=$((RANDOM % 10 + 3))
+  enemies[$i,health]=50
+done
+
+# ---------- Параметры рендеринга ----------
+SCREEN_WIDTH=80
+SCREEN_HEIGHT=20
+FOV=0.8
+MAX_DEPTH=12
+
+# ---------- Функции ----------
+get_map() {
+  local x=$1 y=$2
+  local idx=$((y * MAP_SIZE + x))
+  echo ${MAP[$idx]}
+}
+
+draw_scene() {
+  clear
+  for ((sx=0; sx<SCREEN_WIDTH; sx++)); do
+    local ray_angle=$(echo "$player_angle - $FOV/2 + $FOV*$sx/$SCREEN_WIDTH" | bc -l)
+    local ray_x=$player_x
+    local ray_y=$player_y
+    local dist=0
+    local hit=0
+    local hit_enemy=-1
+
+    while [ $dist -lt $MAX_DEPTH ] && [ $hit -eq 0 ]; do
+      dist=$(echo "$dist + 0.1" | bc)
+      ray_x=$(echo "$player_x + c($ray_angle)*$dist" | bc -l)
+      ray_y=$(echo "$player_y + s($ray_angle)*$dist" | bc -l)
+      local mx=$(printf "%.0f" $ray_x)
+      local my=$(printf "%.0f" $ray_y)
+
+      # Проверка стены
+      if [ $(get_map $mx $my) -eq 1 ]; then
+        hit=1
+        break
+      fi
+
+      # Проверка врагов
+      for ((e=0; e<enemy_count; e++)); do
+        local ex=${enemies[$e,0]}
+        local ey=${enemies[$e,1]}
+        if [ $(echo "sqrt(($ray_x-$ex)^2 + ($ray_y-$ey)^2) < 0.5" | bc) -eq 1 ]; then
+          hit=2
+          hit_enemy=$e
+          break 2
+        fi
+      done
+    done
+
+    local wall_height=$(echo "$SCREEN_HEIGHT / $dist" | bc)
+    [ $wall_height -gt $SCREEN_HEIGHT ] && wall_height=$SCREEN_HEIGHT
+
+    local ceiling=$(( (SCREEN_HEIGHT - wall_height) / 2 ))
+    local floor=$(( ceiling + wall_height ))
+
+    # Цвет стены или врага
+    local color="\033[47m" # белый для стен
+    if [ $hit -eq 2 ]; then
+      color="\033[41m" # красный для врагов
+    fi
+
+    for ((sy=0; sy<SCREEN_HEIGHT; sy++)); do
+      tput cup $sy $sx
+      if [ $sy -lt $ceiling ]; then
+        echo -ne "\033[0m "
+      elif [ $sy -lt $floor ]; then
+        if [ $hit -eq 0 ]; then
+          echo -ne "\033[0m "
+        else
+          echo -ne "${color} \033[0m"
+        fi
+      else
+        echo -ne "\033[0m "
+      fi
+    done
+  done
+
+  # Интерфейс
+  tput cup $SCREEN_HEIGHT 0
+  echo "Health: $health  |  Enemies left: $(enemies_alive)"
+  echo "WASD: move  |  Space: shoot  |  Q: quit"
+}
+
+enemies_alive() {
+  local alive=0
+  for ((e=0; e<enemy_count; e++)); do
+    [ ${enemies[$e,health]} -gt 0 ] && alive=$((alive+1))
+  done
+  echo $alive
+}
+
+shoot() {
+  for ((e=0; e<enemy_count; e++)); do
+    if [ ${enemies[$e,health]} -le 0 ]; then continue; fi
+    local ex=${enemies[$e,0]}
+    local ey=${enemies[$e,1]}
+    local dx=$(echo "$ex - $player_x" | bc)
+    local dy=$(echo "$ey - $player_y" | bc)
+    local dist=$(echo "sqrt($dx*$dx + $dy*$dy)" | bc)
+    local angle_to_enemy=$(echo "a($dy/$dx)" | bc -l)
+    local angle_diff=$(echo "$angle_to_enemy - $player_angle" | bc -l)
+    [ $(echo "$dist < 3" | bc) -eq 1 ] && [ $(echo "${angle_diff#-} < 0.3" | bc) -eq 1 ] && {
+      enemies[$e,health]=$((enemies[$e,health] - 30))
+      [ ${enemies[$e,health]} -le 0 ] && enemies[$e,health]=0
+      break
+    }
+  done
+}
+
+# ---------- Основной цикл ----------
+while true; do
+  draw_scene
+  read -t 0.1 -n 1 key
+  case $key in
+    w) player_x=$(echo "$player_x + c($player_angle)*0.3" | bc -l); player_y=$(echo "$player_y + s($player_angle)*0.3" | bc -l);;
+    s) player_x=$(echo "$player_x - c($player_angle)*0.3" | bc -l); player_y=$(echo "$player_y - s($player_angle)*0.3" | bc -l);;
+    a) player_angle=$(echo "$player_angle - 0.2" | bc -l);;
+    d) player_angle=$(echo "$player_angle + 0.2" | bc -l);;
+    ' ') shoot;;
+    q) break;;
+  esac
+done
+
+tput cnorm
+stty echo
+clear
