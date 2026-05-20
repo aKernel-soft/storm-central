@@ -1,17 +1,10 @@
 {
   "projects": [
     {
-      "name": "stoler",
-      "desc": "STOLER package manager (self-update)",
+      "name": "abacus",
+      "desc": "Abacus – console calculator",
       "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/install.sh",
-      "magnet": ""
-    },
-    {
-      "name": "ckm-launcher",
-      "desc": "CKM Launcher - file manager with .ckmenc encryption",
-      "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/ckm.py",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/abacus",
       "magnet": ""
     },
     {
@@ -22,52 +15,17 @@
       "magnet": ""
     },
     {
-      "name": "stop",
-      "desc": "STop – system monitor",
+      "name": "ckm-launcher",
+      "desc": "CKM Launcher - file manager with .ckmenc encryption",
       "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stop",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/ckm.py",
       "magnet": ""
     },
     {
-      "name": "passkeeper",
-      "desc": "PassKeeper – password manager with generator",
+      "name": "eho",
+      "desc": "Eho – simple chat server/client",
       "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/passkeeper",
-      "magnet": ""
-    },
-    {
-      "name": "memo",
-      "desc": "Memo – quick notes with date",
-      "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/memo",
-      "magnet": ""
-    },
-    {
-      "name": "gale",
-      "desc": "Gale – weather in terminal",
-      "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/gale",
-      "magnet": ""
-    },
-    {
-      "name": "packrat",
-      "desc": "PackRat – simple archiver",
-      "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/packrat",
-      "magnet": ""
-    },
-    {
-      "name": "recon",
-      "desc": "Recon – network scanner",
-      "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/recon",
-      "magnet": ""
-    },
-    {
-      "name": "abacus",
-      "desc": "Abacus – console calculator",
-      "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/abacus",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/eho",
       "magnet": ""
     },
     {
@@ -85,10 +43,10 @@
       "magnet": ""
     },
     {
-      "name": "eho",
-      "desc": "Eho – simple chat server/client",
+      "name": "gale",
+      "desc": "Gale – weather in terminal",
       "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/eho",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/gale",
       "magnet": ""
     },
     {
@@ -99,10 +57,45 @@
       "magnet": ""
     },
     {
-      "name": "stormraid",
-      "desc": "STORM Raid – Wolfenstein-style FPS in the terminal",
+      "name": "memo",
+      "desc": "Memo – quick notes with date",
       "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stormraid",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/memo",
+      "magnet": ""
+    },
+    {
+      "name": "packrat",
+      "desc": "PackRat – simple archiver",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/packrat",
+      "magnet": ""
+    },
+    {
+      "name": "passkeeper",
+      "desc": "PassKeeper – password manager with generator",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/passkeeper",
+      "magnet": ""
+    },
+    {
+      "name": "recon",
+      "desc": "Recon – network scanner",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/recon",
+      "magnet": ""
+    },
+    {
+      "name": "stoler",
+      "desc": "STOLER package manager (self-update)",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/install.sh",
+      "magnet": ""
+    },
+    {
+      "name": "stop",
+      "desc": "STop – system monitor",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stop",
       "magnet": ""
     },
     {
