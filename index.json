@@ -2,14 +2,14 @@
   "projects": [
     {
       "name": "abacus",
-      "desc": "Abacus – console calculator",
+      "desc": "Abacus \u2013 console calculator",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/abacus",
       "magnet": ""
     },
     {
       "name": "bolt",
-      "desc": "Bolt – lightning-fast text editor",
+      "desc": "Bolt \u2013 lightning-fast text editor",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/bolt",
       "magnet": ""
@@ -23,63 +23,63 @@
     },
     {
       "name": "eho",
-      "desc": "Eho – simple chat server/client",
+      "desc": "Eho \u2013 simple chat server/client",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/eho",
       "magnet": ""
     },
     {
       "name": "fetch",
-      "desc": "Fetch – downloader with progress bar and magnet support",
+      "desc": "Fetch \u2013 downloader with progress bar and magnet support",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/fetch",
       "magnet": ""
     },
     {
       "name": "flux",
-      "desc": "Flux – real-time network traffic monitor",
+      "desc": "Flux \u2013 real-time network traffic monitor",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/flux",
       "magnet": ""
     },
     {
       "name": "gale",
-      "desc": "Gale – weather in terminal",
+      "desc": "Gale \u2013 weather in terminal",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/gale",
       "magnet": ""
     },
     {
       "name": "glimpse",
-      "desc": "Glimpse – terminal image viewer",
+      "desc": "Glimpse \u2013 terminal image viewer",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/glimpse",
       "magnet": ""
     },
     {
       "name": "memo",
-      "desc": "Memo – quick notes with date",
+      "desc": "Memo \u2013 quick notes with date",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/memo",
       "magnet": ""
     },
     {
       "name": "packrat",
-      "desc": "PackRat – simple archiver",
+      "desc": "PackRat \u2013 simple archiver",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/packrat",
       "magnet": ""
     },
     {
       "name": "passkeeper",
-      "desc": "PassKeeper – password manager with generator",
+      "desc": "PassKeeper \u2013 password manager with generator",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/passkeeper",
       "magnet": ""
     },
     {
       "name": "recon",
-      "desc": "Recon – network scanner",
+      "desc": "Recon \u2013 network scanner",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/recon",
       "magnet": ""
@@ -93,14 +93,14 @@
     },
     {
       "name": "stop",
-      "desc": "STop – system monitor",
+      "desc": "STop \u2013 system monitor",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stop",
       "magnet": ""
     },
     {
       "name": "stormraid",
-      "desc": "STORM Raid – Wolfenstein-style FPS in the terminal",
+      "desc": "STORM Raid \u2013 Wolfenstein-style FPS in the terminal",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stormraid",
       "magnet": ""
