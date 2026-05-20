@@ -15,13 +15,6 @@
       "magnet": ""
     },
     {
-      "name": "ckm-ihp",
-      "desc": "CKM IHP - Internet Hacking Program (SYN flood stress tester)",
-      "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/ckm-ihp.sh",
-      "magnet": ""
-    },
-    {
       "name": "bolt",
       "desc": "Bolt – lightning-fast text editor",
       "type": "script",
