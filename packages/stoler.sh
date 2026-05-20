@@ -1,8 +1,6 @@
 #!/bin/bash
-# STOLER – кросс-платформенный децентрализованный пакетный менеджер
 set -eo pipefail
 
-# Определяем среду: Termux или обычный Linux
 if [ -n "$PREFIX" ] && [ -d "$PREFIX" ]; then
     IS_TERMUX=true
     BIN_DIR="$PREFIX/bin"
@@ -22,17 +20,16 @@ REMOTE_DIR="$D/repos/remotes"
 mkdir -p "$REMOTE_DIR"
 [ ! -f "$LOCAL_INDEX" ] && echo '{"projects":[]}' > "$LOCAL_INDEX"
 
-# ---------- автоматическое добавление ~/stoler в PATH ----------
 setup_path() {
-    if [ -f "$HOME/.bashrc" ]; then
-        if ! grep -q "$DOWNLOAD_BASE" "$HOME/.bashrc"; then
-            echo "export PATH=\"$DOWNLOAD_BASE:\$PATH\"" >> "$HOME/.bashrc"
-            echo "[*] Added $DOWNLOAD_BASE to PATH in .bashrc. Restart shell or run: source ~/.bashrc"
+    local shell_rc="$HOME/.bashrc"
+    if [ -f "$shell_rc" ]; then
+        if ! grep -q "$DOWNLOAD_BASE" "$shell_rc"; then
+            echo "export PATH=\"$DOWNLOAD_BASE:\$PATH\"" >> "$shell_rc"
         fi
     fi
+    export PATH="$DOWNLOAD_BASE:$PATH"
 }
 
-# ---------- список всех пакетов ----------
 list_all() {
     [ -f "$LOCAL_INDEX" ] && jq -r '.projects[] | "\(.name) [\(.type)] - \(.desc)"' "$LOCAL_INDEX" 2>/dev/null || true
     for f in "$REMOTE_DIR"/*.json; do
@@ -40,7 +37,6 @@ list_all() {
     done
 }
 
-# ---------- добавление пакета ----------
 add_pkg() {
     local name="$1" url="$2" type="$3" desc="$4" magnet="${5:-}"
     [ -z "$name" ] || [ -z "$url" ] && {
@@ -53,7 +49,6 @@ add_pkg() {
     echo "[+] Package '$name' added."
 }
 
-# ---------- добавление удалённого репозитория ----------
 remote_add() {
     local name="$1" url="$2"
     [ -z "$name" ] || [ -z "$url" ] && {
@@ -66,7 +61,6 @@ remote_add() {
     } || echo "[!] Failed to download repository."
 }
 
-# ---------- поиск пакета ----------
 find_pkg() {
     local name="$1"
     local info=""
@@ -82,21 +76,25 @@ find_pkg() {
     return 1
 }
 
-# ---------- установка пакета (улучшенная) ----------
 install_pkg() {
     local name="$1"
     local info magnet type url
     info=$(find_pkg "$name") || { echo "[!] Package '$name' not found."; return 1; }
     IFS='|' read -r magnet type url <<< "$info"
 
-    # 1. Прямой URL
+    # Удаляем старую версию, если она уже установлена
+    local target="$DOWNLOAD_BASE/$name"
+    if [ -f "$target" ]; then
+        echo "[*] Package '$name' is already installed. Removing old version..."
+        rm -f "$target"
+    fi
+
     if [ -n "$url" ] && [ "$url" != "null" ]; then
         local fname=$(basename "$url")
-        local target="$DOWNLOAD_BASE/$name"
         echo "[*] Downloading $url..."
         curl -sL -o "$D/downloads/$fname" "$url" && {
             mkdir -p "$DOWNLOAD_BASE"
-            if [ "$name" = "stoler" ]; then bash "$D/downloads/$fname"; else cp "$D/downloads/$fname" "$target"; fi
+            cp "$D/downloads/$fname" "$target"
             chmod +x "$target" 2>/dev/null || true
             setup_path
             echo "[+] Installed '$name'. Run it with: $name"
@@ -105,7 +103,6 @@ install_pkg() {
         echo "[!] URL failed."
     fi
 
-    # 2. Magnet
     if [ -n "$magnet" ] && [ "$magnet" != "null" ]; then
         if command -v transmission-remote >/dev/null; then
             pgrep transmission-da >/dev/null 2>&1 || { transmission-daemon 2>/dev/null; sleep 2; }
@@ -123,7 +120,6 @@ install_pkg() {
             echo ""
             local file=$(find "$D/downloads" -type f ! -name '*.torrent' | head -1)
             [ -z "$file" ] && { echo "[!] No file."; return 1; }
-            local target="$DOWNLOAD_BASE/$name"
             mkdir -p "$DOWNLOAD_BASE"
             cp "$file" "$target"
             chmod +x "$target" 2>/dev/null || true
@@ -140,7 +136,6 @@ install_pkg() {
     return 1
 }
 
-# ---------- публикация файла (торрент) ----------
 publish_file() {
     local file="$1"
     [ ! -f "$file" ] && { echo "[!] File not found."; return 1; }
@@ -163,7 +158,6 @@ publish_file() {
     echo "Use: stoler add <name> <url> <type> <desc> \"$magnet\""
 }
 
-# ---------- самообновление ----------
 self_update() {
     local url="$1"
     [ -z "$url" ] && { echo "Usage: stoler self-update <url>"; return 1; }
@@ -175,7 +169,6 @@ self_update() {
     } || echo "[!] Update failed."
 }
 
-# ---------- интерактивный список (магазин) ----------
 list() {
     setup_path
     clear
@@ -209,14 +202,14 @@ list() {
     if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice > 0 && choice < i )); then
         install_pkg "${pkg_map[$choice]}"
     elif [ "$choice" = "0" ]; then
-        echo "STOLER closed."
+        echo "Shop closed."
     else
         echo "[!] Invalid choice."
     fi
 }
 
 help() {
-    echo "STOLER - Decentralized Package Manager"
+    echo "STOLER - Cross-platform Decentralized Package Manager"
     echo "Developer: aKernel within STORM project"
     echo "Usage: stoler {add|remote|list|install|publish|self-update|help}"
 }
