@@ -13,6 +13,48 @@
       "type": "apk",
       "url": "https://github.com/00-Evan/shattered-pixel-dungeon/releases/download/v2.4.0/Shattered-Pixel-Dungeon-v2.4.0.apk",
       "magnet": ""
+    },
+    {
+      "name": "terraria",
+      "desc": "Terraria – 2D sandbox adventure",
+      "type": "apk",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/Terraria.apk",
+      "magnet": ""
+    },
+    {
+      "name": "minecraft",
+      "desc": "Minecraft – Bedrock Edition",
+      "type": "apk",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/Minecraft.apk",
+      "magnet": ""
+    },
+    {
+      "name": "terraria",
+      "desc": "Terraria – 2D sandbox adventure",
+      "type": "apk",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/Terraria.apk",
+      "magnet": ""
+    },
+    {
+      "name": "minecraft",
+      "desc": "Minecraft – Bedrock Edition",
+      "type": "apk",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/Minecraft.apk",
+      "magnet": ""
+    },
+    {
+      "name": "terraria",
+      "desc": "Terraria – 2D sandbox adventure",
+      "type": "apk",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/Terraria.apk",
+      "magnet": ""
+    },
+    {
+      "name": "minecraft",
+      "desc": "Minecraft – Bedrock Edition",
+      "type": "apk",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/Minecraft.apk",
+      "magnet": ""
     }
   ]
 }
