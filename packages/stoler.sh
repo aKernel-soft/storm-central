@@ -215,6 +215,7 @@ help() {
 }
 
 case "${1:-}" in
+    games)   games_menu;;
     add)     add_pkg "$2" "$3" "$4" "$5" "$6";;
     remote)  remote_add "$3" "$4";;
     list)    list;;
@@ -224,3 +225,78 @@ case "${1:-}" in
     help|--help|-h) help;;
     *)       help;;
 esac
+
+# ---------- games module ----------
+GAMES_INDEX="$D/repos/games-index.json"
+GAMES_REMOTE="https://raw.githubusercontent.com/aKernel-soft/storm-central/main/games-index.json"
+
+fetch_games_index() {
+    echo "[*] Downloading game index..."
+    curl -sL "$GAMES_REMOTE" -o "$GAMES_INDEX"
+    echo "[+] Game index updated."
+}
+
+list_games() {
+    [ ! -f "$GAMES_INDEX" ] && fetch_games_index
+    jq -r '.projects[] | "\(.name) [\(.type)] - \(.desc)"' "$GAMES_INDEX"
+}
+
+install_game() {
+    local name="$1"
+    [ ! -f "$GAMES_INDEX" ] && fetch_games_index
+    info=$(jq -r --arg n "$name" '.projects[] | select(.name==$n) | "\(.magnet)|\(.type)|\(.url)"' "$GAMES_INDEX")
+    [ -z "$info" ] && { echo "[!] Game '$name' not found."; return 1; }
+    IFS='|' read -r magnet type url <<< "$info"
+    
+    local target="$DOWNLOAD_BASE/$name.apk"
+    if [ -f "$target" ]; then
+        echo "[*] Removing old version..."
+        rm -f "$target"
+    fi
+    
+    echo "[*] Downloading $url..."
+    curl -sL -o "$target" "$url" && {
+        chmod 644 "$target"
+        echo "[+] Downloaded. Installing APK..."
+        termux-open "$target"
+        echo "[+] Game '$name' sent to installer."
+        return 0
+    }
+    echo "[!] Download failed."
+    return 1
+}
+
+games_menu() {
+    setup_path
+    clear
+    echo "======== STOLER GAMES ========"
+    echo "Developer: aKernel within STORM project"
+    echo ""
+    
+    local tmp_list="$TMP_DIR/stoler_games_list"
+    list_games > "$tmp_list" 2>/dev/null || true
+    
+    local i=1
+    declare -A pkg_map
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local name="${line%% *}"
+        pkg_map[$i]="$name"
+        echo "  $i) $line"
+        i=$((i+1))
+    done < "$tmp_list"
+    rm -f "$tmp_list"
+    
+    if [ $i -eq 1 ]; then
+        echo "  (no games)"
+        return
+    fi
+    echo "  0) Exit"
+    printf "Select: "
+    read -r choice
+    if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice > 0 && choice < i )); then
+        install_game "${pkg_map[$choice]}"
+    elif [ "$choice" = "0" ]; then
+        echo "Store closed."
+    fi
+}
