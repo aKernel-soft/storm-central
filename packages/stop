@@ -36,19 +36,19 @@ while true; do
     procs=$(ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -16)
 
     clear
-    echo "╔════════════════════════════════════════════════════════╗"
-    printf "║  %-52s ║\n" "$TITLE"
-    echo "╠════════════════════════════════════════════════════════╣"
-    printf "║  %s: %-42s ║\n" "$LOAD_TXT" "$load"
-    printf "║  %s: %-42s ║\n" "$MEM_TXT" "$mem"
-    printf "║  %s: %-42s ║\n" "$SWAP_TXT" "$swap"
-    echo "╠════════════════════════════════════════════════════════╣"
-    printf "║  %-6s %-12s %5s %5s %-20s ║\n" "$PID" "$USER" "$CPU" "$MEM" "$CMD"
-    echo "╠════════════════════════════════════════════════════════╣"
+    echo "====================================================="
+    echo "  $TITLE"
+    echo "====================================================="
+    echo "  $LOAD_TXT: $load"
+    echo "  $MEM_TXT: $mem"
+    echo "  $SWAP_TXT: $swap"
+    echo "====================================================="
+    printf "  %-6s %-12s %5s %5s %s\n" "$PID" "$USER" "$CPU" "$MEM" "$CMD"
+    echo "====================================================="
     echo "$procs" | tail -n +2 | while read pid user cpu mem cmd; do
-        printf "║  %-6s %-12s %5s %5s %-20s ║\n" "$pid" "$user" "$cpu" "$mem" "${cmd:0:20}"
+        printf "  %-6s %-12s %5s %5s %s\n" "$pid" "$user" "$cpu" "$mem" "${cmd:0:30}"
     done
-    echo "╚════════════════════════════════════════════════════════╝"
+    echo "====================================================="
     echo "$EXIT_MSG"
     sleep 2
 done
