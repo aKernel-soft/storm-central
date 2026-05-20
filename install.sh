@@ -8,9 +8,11 @@ RST='\033[0m'
 if [ -n "$PREFIX" ] && [ -d "$PREFIX" ]; then
     IS_TERMUX=true
     BIN_DIR="$PREFIX/bin"
+    SHELL_RC="$HOME/.bashrc"
 else
     IS_TERMUX=false
     BIN_DIR="/usr/local/bin"
+    SHELL_RC="$HOME/.bashrc"
 fi
 
 detect_pkg_manager() {
@@ -65,8 +67,16 @@ STOLER_URL="https://raw.githubusercontent.com/aKernel-soft/storm-central/main/pa
 curl -sL "$STOLER_URL" -o "$BIN_DIR/stoler"
 chmod +x "$BIN_DIR/stoler"
 
+# Добавляем BIN_DIR в PATH, если его там нет
+if ! grep -q "$BIN_DIR" "$SHELL_RC" 2>/dev/null; then
+    echo "export PATH=\"$BIN_DIR:\$PATH\"" >> "$SHELL_RC"
+    echo "[*] Added $BIN_DIR to PATH in $SHELL_RC"
+fi
+export PATH="$BIN_DIR:$PATH"
+hash -r
+
 echo "[3/4] Adding official repository..."
-"$BIN_DIR/stoler" remote add storm-central https://raw.githubusercontent.com/aKernel-soft/storm-central/main/index.json 2>/dev/null || true
+stoler remote add storm-central https://raw.githubusercontent.com/aKernel-soft/storm-central/main/index.json 2>/dev/null || true
 
 echo "[4/4] Finalizing..."
 
