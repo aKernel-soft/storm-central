@@ -60,7 +60,7 @@ echo "[1/4] Installing dependencies..."
 install_deps
 
 echo "[2/4] Downloading STOLER..."
-mkdir -p $BIN_DIR
+mkdir -p "$BIN_DIR"
 STOLER_URL="https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stoler.sh"
 curl -sL "$STOLER_URL" -o "$BIN_DIR/stoler"
 chmod +x "$BIN_DIR/stoler"
