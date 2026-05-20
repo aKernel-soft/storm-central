@@ -1,12 +1,9 @@
 #!/bin/bash
-# STop – system monitor with pseudo-graphics and i18n
-
 trap 'tput cnorm; clear; exit' INT TERM
 tput civis
 
-# Определяем язык
 if locale 2>/dev/null | grep -qi ru; then
-    TITLE="STop – Монитор системы"
+    TITLE="STop - Монитор системы"
     LOAD_TXT="Нагрузка"
     MEM_TXT="Память"
     SWAP_TXT="Своп"
@@ -17,7 +14,7 @@ if locale 2>/dev/null | grep -qi ru; then
     CMD="КОМАНДА"
     EXIT_MSG="Нажмите Ctrl+C для выхода"
 else
-    TITLE="STop – System Monitor"
+    TITLE="STop - System Monitor"
     LOAD_TXT="Load Average"
     MEM_TXT="Memory"
     SWAP_TXT="Swap"
@@ -36,19 +33,19 @@ while true; do
     procs=$(ps -eo pid,user,%cpu,%mem,comm --sort=-%cpu | head -16)
 
     clear
-    echo "====================================================="
+    echo "=============================================================="
     echo "  $TITLE"
-    echo "====================================================="
+    echo "=============================================================="
     echo "  $LOAD_TXT: $load"
     echo "  $MEM_TXT: $mem"
     echo "  $SWAP_TXT: $swap"
-    echo "====================================================="
+    echo "=============================================================="
     printf "  %-6s %-12s %5s %5s %s\n" "$PID" "$USER" "$CPU" "$MEM" "$CMD"
-    echo "====================================================="
+    echo "=============================================================="
     echo "$procs" | tail -n +2 | while read pid user cpu mem cmd; do
         printf "  %-6s %-12s %5s %5s %s\n" "$pid" "$user" "$cpu" "$mem" "${cmd:0:30}"
     done
-    echo "====================================================="
+    echo "=============================================================="
     echo "$EXIT_MSG"
     sleep 2
 done
