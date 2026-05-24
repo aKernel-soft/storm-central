@@ -1,0 +1,163 @@
+#!/bin/bash
+# PICP – Privacy Internet Connection Program
+# aKernel within the STORM project
+# Комбайн: обфускация + маскировка + фрагментация пакетов
+
+trap 'echo "[*] PICP остановлен."; exit' INT TERM
+
+# ---------- i18n ----------
+if locale 2>/dev/null | grep -qi ru; then
+    TITLE="PICP – Приватное подключение"
+    MENU_1="[1] Запустить шум и маскировку (без root)"
+    MENU_2="[2] Включить фрагментацию пакетов (требует root)"
+    MENU_3="[3] Включить всё (шум + фрагментация)"
+    MENU_4="[4] Показать статус"
+    MENU_5="[5] Сбросить всё"
+    MENU_0="[0] Выход"
+    PROMPT="Выберите действие: "
+    SHIELD_UP="Шум и маскировка запущены."
+    FRAG_UP="Фрагментация включена."
+    ALL_UP="Защита и фрагментация активны."
+    RESET_DONE="Всё сброшено."
+    ROOT_REQUIRED="Требуются права root."
+else
+    TITLE="PICP – Private Internet Connection"
+    MENU_1="[1] Start noise & masquerade (no root)"
+    MENU_2="[2] Enable packet fragmentation (needs root)"
+    MENU_3="[3] Enable everything (noise + fragmentation)"
+    MENU_4="[4] Show status"
+    MENU_5="[5] Reset everything"
+    MENU_0="[0] Exit"
+    PROMPT="Select action: "
+    SHIELD_UP="Noise and masquerade started."
+    FRAG_UP="Fragmentation enabled."
+    ALL_UP="Protection and fragmentation active."
+    RESET_DONE="All reset."
+    ROOT_REQUIRED="Root privileges required."
+fi
+
+# ---------- конфигурация ----------
+DEVICE_COUNT=5
+OBFUSCATION_INTERVAL=0.5
+
+# Только "правильные" российские сайты
+SITES=(
+    "https://ria.ru"
+    "https://www.gazeta.ru"
+    "https://www.vesti.ru"
+    "https://www.1tv.ru"
+    "https://www.ntv.ru"
+    "https://www.mk.ru"
+    "https://www.kp.ru"
+    "https://www.gosuslugi.ru"
+    "https://www.mos.ru"
+    "https://www.sberbank.ru"
+)
+
+AGENTS=(
+    "Mozilla/5.0 (Linux; Android 13; Poco C61) AppleWebKit/537.36"
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15"
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15"
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"
+    "Mozilla/5.0 (SmartTV; Linux; Tizen 6.0) AppleWebKit/537.36"
+    "Mozilla/5.0 (Nest Hub; Linux; Google Home) AppleWebKit/537.36"
+    "Alexa Echo/3.0"
+    "PlayStation 5; 1.00"
+    "Xbox Series X; 1.0"
+)
+
+# ---------- функции ----------
+device_emu() {
+    local agent="${AGENTS[$RANDOM % ${#AGENTS[@]}]}"
+    while true; do
+        local url="${SITES[$RANDOM % ${#SITES[@]}]}"
+        curl -s -o /dev/null -H "User-Agent: $agent" "$url" &
+        sleep $((RANDOM % 5 + 1))
+    done
+}
+
+obfuscate_request() {
+    local url="${SITES[$RANDOM % ${#SITES[@]}]}"
+    local agent="${AGENTS[$RANDOM % ${#AGENTS[@]}]}"
+    curl -s -o /dev/null -H "User-Agent: $agent" "$url" &
+}
+
+start_noise() {
+    echo "[*] $SHIELD_UP"
+    for ((i=0; i<DEVICE_COUNT; i++)); do
+        device_emu &
+    done
+    local counter=0
+    while true; do
+        obfuscate_request
+        counter=$((counter + 1))
+        printf "\r  Устройств: %d  |  Запросов: %d" "$DEVICE_COUNT" "$counter"
+        sleep "$OBFUSCATION_INTERVAL"
+    done
+}
+
+start_fragmentation() {
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "[!] $ROOT_REQUIRED"
+        return 1
+    fi
+    echo "[*] $FRAG_UP"
+    iptables -t nat -A OUTPUT -p tcp --dport 80 -j NFQUEUE --queue-num 1 2>/dev/null
+    iptables -t nat -A OUTPUT -p tcp --dport 443 -j NFQUEUE --queue-num 1 2>/dev/null
+    iptables -t mangle -A OUTPUT -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --set-mss 8 2>/dev/null
+    echo "[+] Готово."
+}
+
+stop_fragmentation() {
+    iptables -t nat -F OUTPUT 2>/dev/null
+    iptables -t mangle -F OUTPUT 2>/dev/null
+    echo "[*] Фрагментация сброшена."
+}
+
+show_status() {
+    echo "=========================================="
+    echo "  $TITLE – Статус"
+    echo "=========================================="
+    echo ""
+    echo "Шум и маскировка:"
+    pgrep -f "device_emu" >/dev/null && echo "  [✓] Активны" || echo "  [ ] Неактивны"
+    echo ""
+    echo "Фрагментация пакетов:"
+    iptables -t mangle -L OUTPUT | grep -q TCPMSS && echo "  [✓] Активна" || echo "  [ ] Неактивна"
+    echo ""
+    echo "Нажмите Enter..."
+    read -r
+}
+
+reset_all() {
+    killall device_emu curl 2>/dev/null
+    stop_fragmentation
+    echo "[*] $RESET_DONE"
+}
+
+# ---------- интерфейс ----------
+while true; do
+    echo ""
+    echo "=========================================="
+    echo "  $TITLE"
+    echo "=========================================="
+    echo "  $MENU_1"
+    echo "  $MENU_2"
+    echo "  $MENU_3"
+    echo "  $MENU_4"
+    echo "  $MENU_5"
+    echo "  $MENU_0"
+    echo ""
+    printf "%s" "$PROMPT"
+    read -r choice
+    case "$choice" in
+        1) start_noise &;;
+        2) start_fragmentation;;
+        3) start_noise & start_fragmentation;;
+        4) show_status;;
+        5) reset_all;;
+        0) reset_all; break;;
+        *) echo "[!] Неверный выбор.";;
+    esac
+done
