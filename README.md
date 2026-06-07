@@ -12,13 +12,7 @@ Install STOLER with a single command:
 curl -sL https://raw.githubusercontent.com/aKernel-soft/storm-central/main/install.sh | bash
 ```
 
-After installation the central repository will be added automatically. Open the shop:
-
-```bash
-stoler list
-```
-
-List all available packages:
+After installation the central repository will be added automatically. Open the package list:
 
 ```bash
 stoler list
