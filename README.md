@@ -15,7 +15,7 @@ curl -sL https://raw.githubusercontent.com/aKernel-soft/storm-central/main/insta
 After installation the central repository will be added automatically. Open the shop:
 
 ```bash
-stoler shop
+stoler list
 ```
 
 List all available packages:
