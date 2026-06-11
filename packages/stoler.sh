@@ -300,3 +300,12 @@ games_menu() {
         echo "Store closed."
     fi
 }
+
+# ---------- принудительное обновление индекса ----------
+refresh_index() {
+    echo "[*] Refreshing package index..."
+    rm -f "$REMOTE_DIR/storm-central.json"
+    curl -sL "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/index.json" \
+         -o "$REMOTE_DIR/storm-central.json"
+    echo "[+] Index refreshed from GitHub."
+}
