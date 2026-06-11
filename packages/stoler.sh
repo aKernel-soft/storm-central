@@ -161,11 +161,12 @@ publish_file() {
 self_update() {
     local url="$1"
     [ -z "$url" ] && { echo "Usage: stoler self-update <url>"; return 1; }
-    echo "[*] Downloading new STOLER version..."
-    curl -sL "$url" -o "$TMP_DIR/stoler_new" && {
-        chmod +x "$TMP_DIR/stoler_new"
-        mv "$TMP_DIR/stoler_new" "$BIN_DIR/stoler"
-        echo "[+] STOLER updated."
+    echo "[*] Removing old STOLER and temporary files..."
+    rm -rf "$HOME/.stoler" "$HOME/stoler" "$BIN_DIR/stoler"
+    echo "[*] Downloading new STOLER..."
+    curl -sL "$url" -o "$BIN_DIR/stoler" && {
+        chmod +x "$BIN_DIR/stoler"
+        echo "[+] STOLER updated. Run 'source ~/.bashrc' or restart Termux."
     } || echo "[!] Update failed."
 }
 
