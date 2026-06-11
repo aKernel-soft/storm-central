@@ -1,5 +1,5 @@
 #!/bin/bash
-# IHP 4.2 – адаптивная версия, которая не падает от SIGKILL
+# IHP 4.2 (ME) – aKernel Software
 clear
 
 scan_networks() {
@@ -126,7 +126,7 @@ brute_network() {
 while true; do
     echo "╔══════════════════════════════════════╗"
     echo "║  IHP 4.2 - Internet Hacking Program  ║"
-    echo "║  Developer: aKernel Software          ║"
+    echo "║           aKernel Software           ║"
     echo "╚══════════════════════════════════════╝"
     echo ""
     echo "  [1] Network Scan"
