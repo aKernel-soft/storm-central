@@ -105,13 +105,7 @@
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stormraid",
       "magnet": ""
     },
-    {
-      "name": "ihp42",
-      "desc": "IHP 4.2 - Internet Hacking Program (WPS brute force)",
-      "type": "script",
-      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/ihp42",
-      "magnet": ""
-    },
+
     {
       "name": "ihp42",
       "desc": "IHP 4.2 – Internet Hacking Program (WPS brute force)",
